@@ -1,122 +1,160 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { useInView } from "@/hooks/use-in-view";
+import {
+  Code2,
+  Globe,
+  Smartphone,
+  Palette,
+  Cloud,
+  ArrowRightLeft,
+} from "lucide-react";
+
 interface Service {
-  id: number;
+  id: string;
+  number: string;
   title: string;
   description: string;
   icon: React.ReactNode;
 }
 
-export const ServicesSection = () => {
-  const services: Service[] = [
-    {
-      id: 1,
-      title: "Custom Software Development",
-      description:
-        "Bespoke software solutions tailored to your unique business requirements, built with clean architecture and scalable design patterns.",
-      icon: (
-        <svg className="h-6 w-6 text-zinc-400 mb-3" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 3v2h2V3H3zm18 4H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-6 6c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2h-2V11h2zM7 3v2h2V3H7zm5 16H9v-2h2v2zm4-14c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2h-2V7h2v2zm5.5 7.5l-1.4 1.3 1.7 1.6 1.3-1.4-1.6-1.7zM21 3v2H3V3h18zm0 18v2H3v-2H21z" />
-        </svg>
-      ),
-    },
-    {
-      id: 2,
-      title: "Web Application Development",
-      description:
-        "Robust, responsive web applications that deliver seamless user experiences across all devices, from progressive web apps to complex enterprise portals.",
-      icon: (
-        <svg className="h-6 w-6 text-zinc-400 mb-3" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 7l10 5 10-5" />
-          <path d="M7 10l5 10 5-10" />
-        </svg>
-      ),
-    },
-    {
-      id: 3,
-      title: "Mobile App Development",
-      description:
-        "Native and cross-platform mobile applications that engage users and drive growth, with pixel-perfect designs and smooth performance.",
-      icon: (
-        <svg className="h-6 w-6 text-zinc-400 mb-3" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M16 1H8C6.9 1 6 1.9 6 3v18c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm-4 20c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm5-4H7V4h10v14z" />
-        </svg>
-      ),
-    },
-    {
-      id: 4,
-      title: "UI/UX Design",
-      description:
-        "Beautiful, intuitive interfaces crafted with the user in mind. We combine aesthetic appeal with seamless usability to create memorable digital experiences.",
-      icon: (
-        <svg className="h-6 w-6 text-zinc-400 mb-3" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 22C6.49 22 2 17.51 2 12S6.49 2 12 2s10 4.04 10 9c0 3.31-2.69 6-6 6h-1.77c-.28 0-.5.22-.5.5 0 .12.05.23.13.33.41.47.64 1.06.64 1.67A2.5 2.5 0 0 1 12 22zm0-18c-4.41 0-8 3.59-8 8s3.59 8 8 8c.28 0 .5-.22.5-.5a.54.54 0 0 0-.14-.35c-.41-.46-.63-1.05-.63-1.65a2.5 2.5 0 0 1 2.5-2.5H16c2.21 0 4-1.79 4-4 0-3.86-3.59-7-8-7z" />
-          <circle cx="6.5" cy="11.5" r="1.5" />
-          <circle cx="9.5" cy="7.5" r="1.5" />
-          <circle cx="14.5" cy="7.5" r="1.5" />
-          <circle cx="17.5" cy="11.5" r="1.5" />
-        </svg>
-      ),
-    },
-    {
-      id: 5,
-      title: "Cloud Solutions",
-      description:
-        "Scalable, secure cloud infrastructure on AWS, Azure, and GCP. We help you migrate, optimize, and manage your cloud resources for maximum efficiency.",
-      icon: (
-        <svg className="h-6 w-6 text-zinc-400 mb-3" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
-        </svg>
-      ),
-    },
-    {
-      id: 6,
-      title: "Digital Transformation",
-      description:
-        "End-to-end digital transformation strategies that modernize legacy systems, optimize processes, and accelerate growth in the digital economy.",
-      icon: (
-        <svg className="h-6 w-6 text-zinc-400 mb-3" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-        </svg>
-      ),
-    },
-  ];
+const services: Service[] = [
+  {
+    id: "custom-software",
+    number: "01",
+    title: "Custom Software Development",
+    description:
+      "Bespoke software solutions engineered from the ground up. We build systems that fit your business, not the other way around.",
+    icon: <Code2 className="w-5 h-5" strokeWidth={1.5} />,
+  },
+  {
+    id: "web-apps",
+    number: "02",
+    title: "Web Application Development",
+    description:
+      "High-performance web applications built with modern frameworks. Responsive, accessible, and built to scale.",
+    icon: <Globe className="w-5 h-5" strokeWidth={1.5} />,
+  },
+  {
+    id: "mobile-apps",
+    number: "03",
+    title: "Mobile Application Development",
+    description:
+      "Native and cross-platform mobile applications. Smooth performance, polished interfaces, and reliable user experiences.",
+    icon: <Smartphone className="w-5 h-5" strokeWidth={1.5} />,
+  },
+  {
+    id: "ui-ux",
+    number: "04",
+    title: "UI/UX Design",
+    description:
+      "Research-driven design that balances aesthetics with usability. We create interfaces that users understand instinctively.",
+    icon: <Palette className="w-5 h-5" strokeWidth={1.5} />,
+  },
+  {
+    id: "cloud",
+    number: "05",
+    title: "Cloud & Backend Solutions",
+    description:
+      "Scalable cloud infrastructure and backend systems. AWS, Azure, GCP — architected for performance and cost efficiency.",
+    icon: <Cloud className="w-5 h-5" strokeWidth={1.5} />,
+  },
+  {
+    id: "transformation",
+    number: "06",
+    title: "Digital Transformation",
+    description:
+      "Modernize legacy systems, automate workflows, and digitize operations. Strategic technology consulting for lasting change.",
+    icon: <ArrowRightLeft className="w-5 h-5" strokeWidth={1.5} />,
+  },
+];
+
+export function ServicesSection() {
+  const { ref: sectionRef, isInView } = useInView();
 
   return (
-    <section
-      id="services"
-      className="py-24 md:py-32 relative bg-black"
-    >
-      <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter mb-12 relative">
-          Our Services
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-1 w-6 bg-white content-['']"></span>
-        </h2>
+    <section id="services" className="py-24 md:py-36 bg-slate-50">
+      <div ref={sectionRef} className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div className="mb-16 md:mb-24">
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={isInView ? { opacity: 1 } : {}}
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-2 text-[11px] font-medium tracking-[0.2em] uppercase text-blue-600 mb-8"
+          >
+            <span className="w-8 h-px bg-blue-600" />
+            Services
+          </motion.span>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {services.map((service) => (
-            <article
-              key={service.id}
-              className="group overflow-hidden rounded-2xl bg-white/[0.02] border border-white/[0.02] backdrop-blur-md transition-all duration-500 hover:bg-white/[0.04] hover:border-white/[0.04]"
-            >
-              <div className="h-24 w-24 m-6 rounded-xl flex items-center justify-center bg-white/5 transition-colors group-hover:bg-white/10">
-                {service.icon}
-              </div>
+          <motion.h2
+            initial={{ opacity: 0, y: 30 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.1] tracking-[-0.02em] text-slate-900 max-w-xl"
+          >
+            Engineering solutions
+            <br />
+            for every stage of
+            <br />
+            your business.
+          </motion.h2>
+        </div>
 
-              <div className="px-6 pb-6">
-                <h3 className="text-xl font-medium tracking-[0.1em] mb-3 text-white transition-colors group-hover:text-white">
-                  {service.title}
-                </h3>
-
-                <p className="text-zinc-500 text-sm leading-relaxed">
-                  {service.description}
-                </p>
-              </div>
-            </article>
+        <div className="space-y-0">
+          {services.map((service, i) => (
+            <ServiceItem key={service.id} service={service} index={i} />
           ))}
         </div>
       </div>
     </section>
   );
-};
+}
+
+function ServiceItem({ service, index }: { service: Service; index: number }) {
+  const { ref, isInView } = useInView({ threshold: 0.3 });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 20 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{
+        duration: 0.7,
+        delay: index * 0.08,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+      className="group border-t border-slate-200 last:border-b"
+    >
+      <div className="py-8 md:py-10 flex flex-col md:flex-row md:items-center gap-6 md:gap-12 cursor-default">
+        <span className="text-[12px] font-medium tracking-[0.1em] text-blue-600 w-8 shrink-0">
+          {service.number}
+        </span>
+
+        <div className="text-slate-400 group-hover:text-blue-600 transition-colors duration-500 shrink-0">
+          {service.icon}
+        </div>
+
+        <h3 className="text-[18px] md:text-[20px] font-medium tracking-[-0.01em] text-slate-900 md:w-[320px] shrink-0">
+          {service.title}
+        </h3>
+
+        <p className="text-[14px] leading-relaxed text-slate-500 group-hover:text-slate-600 transition-colors duration-500 flex-1">
+          {service.description}
+        </p>
+
+        <div className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 group-hover:border-blue-200 group-hover:bg-blue-50 transition-all duration-500 shrink-0">
+          <svg
+            className="w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-all duration-500 group-hover:translate-x-0.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </motion.div>
+  );
+}

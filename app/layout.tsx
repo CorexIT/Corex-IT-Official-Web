@@ -14,17 +14,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Corex IT - Premium Software Development Company",
-  description: "Corex IT - Engineering exceptional digital experiences and software solutions",
+  title: "Corex IT — Software Engineering & Development Company",
+  description:
+    "Corex IT designs and develops scalable web, mobile, and software solutions for businesses ready to grow in a digital-first world.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-black text-white">
+      <body className="min-h-full flex flex-col bg-white text-slate-800">
         <Navbar />
         <main className="flex-1">{children}</main>
       </body>

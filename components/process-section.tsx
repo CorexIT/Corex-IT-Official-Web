@@ -1,138 +1,134 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { useInView } from "@/hooks/use-in-view";
 
-function useInView(ref: React.RefObject<HTMLElement | null>): boolean {
-  const [isInView, setIsInView] = useState(false);
+const steps = [
+  {
+    number: "01",
+    title: "Discover",
+    description:
+      "We learn your business, your users, and your goals. Research and strategy define the foundation.",
+  },
+  {
+    number: "02",
+    title: "Strategize",
+    description:
+      "Technical architecture, project planning, and roadmap creation. Every decision is intentional.",
+  },
+  {
+    number: "03",
+    title: "Design",
+    description:
+      "Wireframes, prototypes, and design systems. We craft interfaces that are both beautiful and functional.",
+  },
+  {
+    number: "04",
+    title: "Develop",
+    description:
+      "Clean, maintainable code built with modern tools and best practices. Iterative development with regular checkpoints.",
+  },
+  {
+    number: "05",
+    title: "Test",
+    description:
+      "Thorough QA across devices, browsers, and scenarios. Performance, security, and accessibility validated.",
+  },
+  {
+    number: "06",
+    title: "Launch",
+    description:
+      "Deployed with care, monitored closely, and optimized continuously. Your product is just getting started.",
+  },
+];
 
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.unobserve(element);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-
-  return isInView;
-}
-
-interface ProcessStep {
-  id: number;
-  title: string;
-  description: string;
-}
-
-export const ProcessSection = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(sectionRef);
-
-  const steps: ProcessStep[] = [
-    {
-      id: 1,
-      title: "Discover",
-      description:
-        "We begin by understanding your vision, goals, and challenges through in-depth consultations and research.",
-    },
-    {
-      id: 2,
-      title: "Design",
-      description:
-        "Our team creates wireframes, prototypes, and design systems that balance aesthetics with functionality.",
-    },
-    {
-      id: 3,
-      title: "Develop",
-      description:
-        "We build your product using clean, maintainable code following best practices and modern architecture.",
-    },
-    {
-      id: 4,
-      title: "Test",
-      description:
-        "Rigorous testing across devices and platforms ensures quality, performance, and security at every stage.",
-    },
-    {
-      id: 5,
-      title: "Launch",
-      description:
-        "We deploy your solution to production with seamless deployment strategies and monitor the initial rollout.",
-    },
-    {
-      id: 6,
-      title: "Scale",
-      description:
-        "We help you grow by optimizing performance, adding features, and expanding to new markets and users.",
-    },
-  ];
+export function ProcessSection() {
+  const { ref: sectionRef, isInView } = useInView();
 
   return (
-    <section
-      id="process"
-      ref={sectionRef}
-      className="py-24 md:py-32 relative bg-black"
-    >
-      <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter mb-12 relative">
-          Our Process
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-1 w-6 bg-white content-['']"></span>
-        </h2>
+    <section id="process" className="py-24 md:py-36 bg-white">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div className="grid lg:grid-cols-[1fr_1.5fr] gap-16 lg:gap-24">
+          <div ref={sectionRef}>
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={isInView ? { opacity: 1 } : {}}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 text-[11px] font-medium tracking-[0.2em] uppercase text-blue-600 mb-8"
+            >
+              <span className="w-8 h-px bg-blue-600" />
+              Process
+            </motion.span>
 
-        <div className="grid md:grid-cols-2 gap-12 items-start">
-          <div>
-            <p className="text-zinc-400 text-sm mb-8">
-              We follow a proven, iterative process that ensures your project&apos;s success
-              from concept to launch and beyond.
-            </p>
+            <motion.h2
+              initial={{ opacity: 0, y: 30 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.1] tracking-[-0.02em] text-slate-900 mb-8"
+            >
+              A proven path
+              <br />
+              from idea to launch.
+            </motion.h2>
 
-            <div className="space-y-4">
-              {steps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className={`px-6 py-8 rounded-2xl bg-white/[0.02] border border-white/[0.02] backdrop-blur-md transition-all duration-500 ${
-                    isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
-                  }`}
-                  style={{ transitionDelay: `${index * 100}ms` }}
-                >
-                  <div className="flex items-start gap-4">
-                    <div
-                      className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white/10 bg-white/5"
-                    >
-                      <span className="text-xl font-bold text-white">{step.id}</span>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium mb-2 text-white">{step.title}</h3>
-                      <p className="text-zinc-500 text-sm">{step.description}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[15px] leading-[1.75] text-slate-500 max-w-md"
+            >
+              We follow a structured, iterative process that ensures quality at every
+              stage. No shortcuts, no surprises — just reliable delivery.
+            </motion.p>
           </div>
 
-          <div className={`transition-opacity duration-700 ${isInView ? "opacity-100" : "opacity-0"}`}>
-            <div className="h-64 w-full md:h-[500px] rounded-3xl bg-white/[0.02] border border-white/[0.02] backdrop-blur-md flex items-center justify-center sticky top-24">
-              <div className="text-center">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-full border-2 border-white/10 flex items-center justify-center">
-                  <svg className="w-10 h-10 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 7l10 5 10-5M2 12l10 5 10-5M2 17l10 5 10-5" />
-                  </svg>
-                </div>
-                <p className="text-zinc-400 text-sm tracking-[0.1em]">Iterative Development</p>
-              </div>
+          <div className="relative">
+            <div className="absolute left-[19px] top-0 bottom-0 w-px bg-slate-200" />
+
+            <div className="space-y-0">
+              {steps.map((step, i) => (
+                <ProcessStep key={step.number} step={step} index={i} />
+              ))}
             </div>
           </div>
         </div>
       </div>
     </section>
   );
-};
+}
+
+function ProcessStep({ step, index }: { step: (typeof steps)[0]; index: number }) {
+  const { ref, isInView } = useInView({ threshold: 0.4 });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, x: -10 }}
+      animate={isInView ? { opacity: 1, x: 0 } : {}}
+      transition={{
+        duration: 0.7,
+        delay: index * 0.08,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+      className="relative flex gap-8 py-6 md:py-8"
+    >
+      <div className="relative z-10 w-[40px] shrink-0 flex items-start justify-center pt-1">
+        <div className="w-[9px] h-[9px] rounded-full bg-blue-600 border-2 border-white shadow-sm" />
+      </div>
+
+      <div className="flex-1 pb-2">
+        <div className="flex items-baseline gap-3 mb-2">
+          <span className="text-[11px] font-medium tracking-[0.1em] text-blue-600">
+            {step.number}
+          </span>
+          <h3 className="text-[17px] font-medium text-slate-900 tracking-[-0.01em]">
+            {step.title}
+          </h3>
+        </div>
+        <p className="text-[13px] leading-relaxed text-slate-500 max-w-md">
+          {step.description}
+        </p>
+      </div>
+    </motion.div>
+  );
+}

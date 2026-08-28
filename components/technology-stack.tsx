@@ -1,187 +1,115 @@
 "use client";
 
-import { useRef, useMemo, useEffect, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Float } from "@react-three/drei";
-import * as THREE from "three";
+import { motion } from "framer-motion";
+import { useInView } from "@/hooks/use-in-view";
+import { Hero3D } from "./hero3d";
 
-interface TechNode {
-  id: string;
-  label: string;
-  x: number;
-  y: number;
-  z: number;
-}
-
-const techNodes: TechNode[] = [
-  { id: "react", label: "React", x: -4, y: 2, z: 0 },
-  { id: "next", label: "Next.js", x: 4, y: 2, z: 0 },
-  { id: "node", label: "Node.js", x: -3, y: -2, z: 0 },
-  { id: "net", label: ".NET", x: 3, y: -2, z: 0 },
-  { id: "pg", label: "PostgreSQL", x: 0, y: 4, z: 0 },
-  { id: "cloud", label: "Cloud", x: 0, y: -4, z: 0 },
+const technologies = [
+  { name: "React", category: "Frontend" },
+  { name: "Next.js", category: "Frontend" },
+  { name: "TypeScript", category: "Language" },
+  { name: "Node.js", category: "Backend" },
+  { name: ".NET", category: "Backend" },
+  { name: "Java", category: "Backend" },
+  { name: "PostgreSQL", category: "Database" },
+  { name: "MongoDB", category: "Database" },
+  { name: "AWS", category: "Cloud" },
+  { name: "Azure", category: "Cloud" },
+  { name: "Docker", category: "DevOps" },
+  { name: "Kubernetes", category: "DevOps" },
 ];
 
-function TechSphere({ position }: { position: [number, number, number] }) {
-  const meshRef = useRef<THREE.Mesh>(null);
+const capabilities = [
+  "Custom Software Development",
+  "Cloud-Native Architecture",
+  "Microservices & APIs",
+  "DevOps & CI/CD",
+  "Performance Engineering",
+  "Security & Compliance",
+];
 
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += 0.005;
-      const t = state.clock.getElapsedTime();
-      meshRef.current.position.y = position[1] + Math.sin(t + position[0]) * 0.1;
-    }
-  });
-
-  return (
-    <Float speed={2} rotationIntensity={0.2} floatIntensity={0.3}>
-      <mesh ref={meshRef} position={position}>
-        <sphereGeometry args={[0.3, 32, 32]} />
-        <meshStandardMaterial
-          color="#ffffff"
-          roughness={0.2}
-          metalness={0.3}
-          emissive="#ffffff"
-          emissiveIntensity={0.05}
-        />
-      </mesh>
-    </Float>
-  );
-}
-
-function TechLines() {
-  const linesRef = useRef<THREE.Group>(null);
-
-  const lineGeometry = useMemo(() => {
-    const points: THREE.Vector3[][] = [];
-    for (let i = 0; i < techNodes.length; i++) {
-      for (let j = i + 1; j < techNodes.length; j++) {
-        points.push([
-          new THREE.Vector3(techNodes[i].x, techNodes[i].y, techNodes[i].z),
-          new THREE.Vector3(techNodes[j].x, techNodes[j].y, techNodes[j].z),
-        ]);
-      }
-    }
-    return points;
-  }, []);
-
-  useFrame((state) => {
-    if (linesRef.current) {
-      linesRef.current.rotation.z = Math.sin(state.clock.getElapsedTime() * 0.1) * 0.05;
-    }
-  });
+export function TechnologyStackSection() {
+  const { ref: sectionRef, isInView } = useInView();
+  const { ref: gridRef, isInView: gridInView } = useInView({ threshold: 0.1 });
 
   return (
-    <group ref={linesRef}>
-      {lineGeometry.map((points, index) => (
-        <line key={index}>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[new Float32Array(points.flatMap((p) => [p.x, p.y, p.z])), 3]}
-              />
-            </bufferGeometry>
-          <lineBasicMaterial color="#ffffff" transparent opacity={0.1} />
-        </line>
-      ))}
-    </group>
-  );
-}
+    <section className="py-24 md:py-36 bg-white relative overflow-hidden">
+      <Hero3D />
 
-function TechEcosystem() {
-  return (
-    <Canvas
-      style={{ width: "100%", height: "100%" }}
-      camera={{ position: [0, 0, 12], fov: 60 }}
-      gl={{ antialias: true, alpha: true }}
-    >
-      <ambientLight color="#ffffff" intensity={0.3} />
-      <directionalLight color="#ffffff" intensity={0.6} position={[5, 5, 5]} />
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
+          <div ref={sectionRef}>
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={isInView ? { opacity: 1 } : {}}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 text-[11px] font-medium tracking-[0.2em] uppercase text-blue-600 mb-8"
+            >
+              <span className="w-8 h-px bg-blue-600" />
+              Technology
+            </motion.span>
 
-      <TechLines />
+            <motion.h2
+              initial={{ opacity: 0, y: 30 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.1] tracking-[-0.02em] text-slate-900 mb-8"
+            >
+              Built with modern
+              <br />
+              technology.
+            </motion.h2>
 
-      {techNodes.map((node) => (
-        <TechSphere key={node.id} position={[node.x, node.y, node.z]} />
-      ))}
-    </Canvas>
-  );
-}
-
-function useInView(ref: React.RefObject<HTMLElement | null>): boolean {
-  const [isInView, setIsInView] = useState(false);
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.unobserve(element);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-
-  return isInView;
-}
-
-export const TechnologyStackSection = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(sectionRef);
-
-  const techCapabilities = [
-    "Custom Software Development",
-    "Cloud-Native Architecture",
-    "Microservices",
-    "API Development",
-    "DevOps & CI/CD",
-    "Security & Compliance",
-  ];
-
-  return (
-    <section
-      ref={sectionRef}
-      className="py-24 md:py-32 relative bg-black"
-    >
-      <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter mb-12 relative">
-          Technology Stack
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-1 w-6 bg-white content-['']"></span>
-        </h2>
-
-        <div className="grid md:grid-cols-2 gap-12">
-          <div>
-            <p className="text-zinc-400 text-sm mb-8">
-              We work with a diverse range of technologies to build robust, scalable,
-              and innovative software solutions tailored to your needs.
-            </p>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="text-[15px] leading-[1.75] text-slate-500 max-w-md mb-12"
+            >
+              We choose technologies based on what best serves the project.
+              Our stack is modern, proven, and battle-tested across industries.
+            </motion.p>
 
             <div className="space-y-3">
-              {techCapabilities.map((tech, index) => (
-                <div
-                  key={tech}
-                  className={`px-4 py-2 rounded-full bg-white/[0.02] border border-white/[0.02] backdrop-blur-md transition-all duration-500 ${
-                    isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-                  }`}
-                  style={{ transitionDelay: `${index * 80}ms` }}
+              {capabilities.map((cap, i) => (
+                <motion.div
+                  key={cap}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={isInView ? { opacity: 1, x: 0 } : {}}
+                  transition={{ duration: 0.6, delay: 0.3 + i * 0.06 }}
+                  className="flex items-center gap-3"
                 >
-                  <span className="text-sm text-zinc-400">{tech}</span>
-                </div>
+                  <span className="w-1 h-1 rounded-full bg-blue-600" />
+                  <span className="text-[13px] text-slate-600">{cap}</span>
+                </motion.div>
               ))}
             </div>
           </div>
 
-          <div className="h-[400px] md:h-[500px] rounded-3xl overflow-hidden bg-white/[0.02] border border-white/[0.02]">
-            <TechEcosystem />
+          <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {technologies.map((tech, i) => (
+              <motion.div
+                key={tech.name}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={gridInView ? { opacity: 1, scale: 1 } : {}}
+                transition={{
+                  duration: 0.6,
+                  delay: i * 0.05,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="group relative p-5 rounded-xl bg-slate-50 border border-slate-200 transition-all duration-300 hover:bg-white hover:border-blue-200 hover:shadow-sm"
+              >
+                <p className="text-[15px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors duration-300 mb-1">
+                  {tech.name}
+                </p>
+                <p className="text-[11px] tracking-[0.1em] uppercase text-slate-400">
+                  {tech.category}
+                </p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </div>
     </section>
   );
-};
+}

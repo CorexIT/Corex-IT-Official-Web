@@ -1,180 +1,138 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { useInView } from "@/hooks/use-in-view";
 
-function useInView(ref: React.RefObject<HTMLElement | null>): boolean {
-  const [isInView, setIsInView] = useState(false);
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.unobserve(element);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-
-  return isInView;
-}
-
-export const AboutSection = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(sectionRef);
-
-  const mission = {
-    title: "Our Mission",
+const capabilities = [
+  {
+    title: "Product Engineering",
     description:
-      "To deliver exceptional digital experiences through innovative software development, clean code, and collaborative partnerships that empower businesses to thrive in the digital age.",
-  };
-
-  const vision = {
-    title: "Our Vision",
+      "End-to-end product development from concept to launch. We build software that solves real problems.",
+  },
+  {
+    title: "Digital Experiences",
     description:
-      "To become a globally recognized technology partner that transforms industries through cutting-edge solutions, ethical practices, and continuous innovation.",
-  };
+      "Interfaces that feel intuitive, look exceptional, and keep users engaged from the first interaction.",
+  },
+  {
+    title: "Scalable Systems",
+    description:
+      "Architecture designed to grow with your business. Clean code, robust infrastructure, lasting solutions.",
+  },
+];
 
-  const values = [
-    {
-      title: "Excellence",
-      description:
-        "We push the boundaries of quality, delivering robust, scalable, and maintainable software solutions.",
-    },
-    {
-      title: "Innovation",
-      description:
-        "We constantly explore emerging technologies and creative approaches to solve complex challenges.",
-    },
-    {
-      title: "Integrity",
-      description:
-        "We build trust through transparency, honesty, and delivering on our promises.",
-    },
-    {
-      title: "Collaboration",
-      description:
-        "We work closely with our clients as an extension of their team, fostering partnership and shared success.",
-    },
-  ];
+export function AboutSection() {
+  const { ref: sectionRef, isInView } = useInView();
+  const { ref: capRef, isInView: capInView } = useInView({ threshold: 0.2 });
 
   return (
-    <section
-      id="about"
-      ref={sectionRef}
-      className="py-24 md:py-32 relative bg-black"
-    >
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+    <section id="about" className="relative py-24 md:py-32 bg-white overflow-hidden">
+      {/* subtle architectural top divider */}
+      <div className="absolute top-0 left-6 lg:left-12 right-6 lg:right-12 h-px bg-slate-100" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-px bg-blue-600 hidden md:block" />
+
+      <div ref={sectionRef} className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
           <div>
-            <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter mb-8 relative pt-2">
-              About Corex IT
-              <span className="absolute left-0 top-0 h-1 w-6 bg-white content-['']"></span>
-            </h2>
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={isInView ? { opacity: 1 } : {}}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-blue-600 mb-8"
+            >
+              <span className="w-8 h-px bg-blue-600" />
+              About
+            </motion.span>
 
-            <p className="text-lg text-zinc-400 leading-relaxed mb-10 max-w-xl">
-              Corex IT is a premium software development company dedicated to engineering
-              exceptional digital experiences. We combine technical expertise with artistic
-              design to create products that not only function perfectly but also inspire.
-            </p>
-
-            <p className="text-lg text-zinc-400 leading-relaxed max-w-xl">
-              From startups to enterprises, we partner with organizations across industries
-              to turn their vision into reality through custom software, web applications,
-              and digital transformation initiatives.
-            </p>
+            <motion.h2
+              initial={{ opacity: 0, y: 24 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[clamp(1.8rem,3.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em] text-slate-900"
+            >
+              We turn complex ideas
+              <br />
+              into simple digital
+              <br />
+              products.
+            </motion.h2>
           </div>
 
-          <div className="space-y-6">
-            {[
-              { label: "Mission", content: mission.description },
-              { label: "Vision", content: vision.description },
-              {
-                label: "Values",
-                content: values.map((v) => v.description).join(" | "),
-              },
-            ].map((item, index) => (
-              <div
-                key={item.label}
-                className={`px-6 py-8 rounded-2xl bg-white/[0.02] border border-white/[0.02] backdrop-blur-md transition-all duration-500 hover:bg-white/[0.04] ${
-                  isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-                }`}
-                style={{ transitionDelay: `${index * 150}ms` }}
-              >
-                <h3 className={`text-xl font-medium tracking-[0.1em] mb-3 ${
-                  item.label === "Mission"
-                    ? "text-white"
-                    : item.label === "Vision"
-                    ? "text-zinc-300"
-                    : "text-zinc-400"
-                }`}>
-                  {item.label}
-                </h3>
-                <p className="text-zinc-500 text-sm leading-relaxed">
-                  {item.content}
-                </p>
+          <div className="lg:pt-2">
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[15px] leading-[1.7] text-slate-600 mb-6"
+            >
+              Corex IT is a software engineering studio focused on building
+              high-quality digital products. We partner with startups, scale-ups,
+              and enterprises to design, develop, and deploy software that drives
+              real business outcomes.
+            </motion.p>
+
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.7, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[15px] leading-[1.7] text-slate-500"
+            >
+              Our engineering-first approach means we don&apos;t just write code.
+              We architect solutions. Every project is built with clean code,
+              modern patterns, and a commitment to long-term maintainability.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={isInView ? { opacity: 1 } : {}}
+              transition={{ duration: 0.7, delay: 0.5 }}
+              className="mt-8 flex items-center gap-8 pt-6 border-t border-slate-100"
+            >
+              <div>
+                <p className="text-[22px] font-semibold tracking-[-0.02em] text-slate-900 leading-none">50+</p>
+                <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1">Projects shipped</p>
               </div>
-            ))}
+              <span className="w-px h-10 bg-slate-200" />
+              <div>
+                <p className="text-[22px] font-semibold tracking-[-0.02em] text-slate-900 leading-none">12+</p>
+                <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1">Years engineering</p>
+              </div>
+              <span className="w-px h-10 bg-slate-200 hidden sm:block" />
+              <div className="hidden sm:block">
+                <p className="text-[22px] font-semibold tracking-[-0.02em] text-slate-900 leading-none">99%</p>
+                <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1">Client retention</p>
+              </div>
+            </motion.div>
           </div>
         </div>
 
-        <div className="mt-16 pt-16 border-t border-white/[0.02]">
-          <h3 className="text-2xl font-bold tracking-tighter mb-6 relative pt-2">
-            Why Choose Corex IT?
-          </h3>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            <div className="px-6 py-8 rounded-2xl bg-white/[0.02] border border-white/[0.02] transition-all duration-300 hover:bg-white/[0.04]">
-              <div className="h-12 w-12 rounded bg-white/10 flex items-center justify-center mb-6">
-                <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 7l10 5 10-5" />
-                  <path d="M7 10l5 10 5-10" />
-                </svg>
+        <div ref={capRef} className="mt-16 md:mt-20 grid md:grid-cols-3 gap-5">
+          {capabilities.map((cap, i) => (
+            <motion.div
+              key={cap.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={capInView ? { opacity: 1, y: 0 } : {}}
+              transition={{
+                duration: 0.6,
+                delay: i * 0.1,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className="group relative p-7 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-[0_4px_20px_rgba(15,23,42,0.06)] transition-all duration-300"
+            >
+              <div className="absolute top-0 left-7 right-7 h-px bg-blue-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+              <div className="text-[11px] font-semibold tracking-[0.14em] uppercase text-blue-600 mb-4">
+                0{i + 1}
               </div>
-              <h4 className="text-xl font-medium mb-3">Expert Team</h4>
-              <p className="text-zinc-400 text-sm">
-                Senior developers with 5+ years of experience across modern stacks.
+              <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-slate-900 mb-2.5">
+                {cap.title}
+              </h3>
+              <p className="text-[13px] leading-[1.6] text-slate-500">
+                {cap.description}
               </p>
-            </div>
-
-            <div className="px-6 py-8 rounded-2xl bg-white/[0.02] border border-white/[0.02] transition-all duration-300 hover:bg-white/[0.04]">
-              <div className="h-12 w-12 rounded bg-white/10 flex items-center justify-center mb-6">
-                <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 7l10 5 10-5" />
-                  <path d="M7 10l5 10 5-10" />
-                </svg>
-              </div>
-              <h4 className="text-xl font-medium mb-3">Timely Delivery</h4>
-              <p className="text-zinc-400 text-sm">
-                Agile methodologies ensuring on-time project completion.
-              </p>
-            </div>
-
-            <div className="px-6 py-8 rounded-2xl bg-white/[0.02] border border-white/[0.02] transition-all duration-300 hover:bg-white/[0.04]">
-              <div className="h-12 w-12 rounded bg-white/10 flex items-center justify-center mb-6">
-                <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 7l10 5 10-5" />
-                  <path d="M7 10l5 10 5-10" />
-                </svg>
-              </div>
-              <h4 className="text-xl font-medium mb-3">Client Success</h4>
-              <p className="text-zinc-400 text-sm">
-                Proven track record of satisfied clients and successful projects.
-              </p>
-            </div>
-          </div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>
   );
-};
+}
