@@ -2,7 +2,7 @@ import { HeroSection } from "@/components/hero-section";
 import { HeroCapabilitiesBar } from "@/components/hero-capabilities-bar";
 import { ServicesSection } from "@/components/services-section";
 import { BlueFeatureSection } from "@/components/blue-feature-section";
-import { TechnologyStackSection } from "@/components/technology-stack";
+import { IndustriesSection } from "@/components/industries-section";
 import { WhyCorexSection } from "@/components/why-corex-section";
 import { ProcessSection } from "@/components/process-section";
 import { FinalCta } from "@/components/final-cta";
@@ -46,7 +46,7 @@ export default function Home() {
       <HomeIntro />
       <ServicesSection />
       <BlueFeatureSection />
-      <TechnologyStackSection />
+      <IndustriesSection />
       <WhyCorexSection />
       <ProcessSection />
       <FinalCta />
