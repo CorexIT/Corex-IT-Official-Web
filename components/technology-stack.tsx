@@ -2,114 +2,112 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "@/hooks/use-in-view";
-import { Hero3D } from "./hero3d";
 
-const technologies = [
-  { name: "React", category: "Frontend" },
-  { name: "Next.js", category: "Frontend" },
-  { name: "TypeScript", category: "Language" },
-  { name: "Node.js", category: "Backend" },
-  { name: ".NET", category: "Backend" },
-  { name: "Java", category: "Backend" },
-  { name: "PostgreSQL", category: "Database" },
-  { name: "MongoDB", category: "Database" },
-  { name: "AWS", category: "Cloud" },
-  { name: "Azure", category: "Cloud" },
-  { name: "Docker", category: "DevOps" },
-  { name: "Kubernetes", category: "DevOps" },
-];
-
-const capabilities = [
-  "Custom Software Development",
-  "Cloud-Native Architecture",
-  "Microservices & APIs",
-  "DevOps & CI/CD",
-  "Performance Engineering",
-  "Security & Compliance",
+const groups: { title: string; items: string[] }[] = [
+  { title: "Frontend", items: ["React", "Next.js"] },
+  { title: "Backend", items: [".NET", "Java", "Spring Boot", "Node.js", "Python"] },
+  { title: "Mobile", items: ["React Native", "Flutter"] },
+  { title: "Database", items: ["PostgreSQL", "MySQL", "MongoDB"] },
+  { title: "Cloud & DevOps", items: ["AWS", "Docker", "Kubernetes"] },
+  { title: "Tools", items: ["Git", "GitHub", "Figma"] },
 ];
 
 export function TechnologyStackSection() {
-  const { ref: sectionRef, isInView } = useInView();
-  const { ref: gridRef, isInView: gridInView } = useInView({ threshold: 0.1 });
+  const { ref, isInView } = useInView();
+  const { ref: gridRef, isInView: gridInView } = useInView({ threshold: 0.12 });
 
   return (
-    <section className="py-24 md:py-36 bg-white relative overflow-hidden">
-      <Hero3D />
-
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
-          <div ref={sectionRef}>
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={isInView ? { opacity: 1 } : {}}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 text-[11px] font-medium tracking-[0.2em] uppercase text-blue-600 mb-8"
-            >
-              <span className="w-8 h-px bg-blue-600" />
-              Technology
-            </motion.span>
-
-            <motion.h2
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.1] tracking-[-0.02em] text-slate-900 mb-8"
-            >
-              Built with modern
+    <section id="technologies" className="relative bg-white overflow-hidden border-t border-slate-100">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-16 md:py-20">
+        <div ref={ref} className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
+          <div>
+            <span className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-4">
+              <span className="w-8 h-px bg-[#0057B8]" />
+              Technologies We Use
+            </span>
+            <h2 className="text-[clamp(1.8rem,3.4vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.03em] text-[#071A33]">
+              Modern stack,
               <br />
-              technology.
-            </motion.h2>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-[15px] leading-[1.75] text-slate-500 max-w-md mb-12"
-            >
-              We choose technologies based on what best serves the project.
-              Our stack is modern, proven, and battle-tested across industries.
-            </motion.p>
-
-            <div className="space-y-3">
-              {capabilities.map((cap, i) => (
-                <motion.div
-                  key={cap}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={isInView ? { opacity: 1, x: 0 } : {}}
-                  transition={{ duration: 0.6, delay: 0.3 + i * 0.06 }}
-                  className="flex items-center gap-3"
-                >
-                  <span className="w-1 h-1 rounded-full bg-blue-600" />
-                  <span className="text-[13px] text-slate-600">{cap}</span>
-                </motion.div>
-              ))}
-            </div>
+              <span className="font-light">proven at scale.</span>
+            </h2>
           </div>
-
-          <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {technologies.map((tech, i) => (
-              <motion.div
-                key={tech.name}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={gridInView ? { opacity: 1, scale: 1 } : {}}
-                transition={{
-                  duration: 0.6,
-                  delay: i * 0.05,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                className="group relative p-5 rounded-xl bg-slate-50 border border-slate-200 transition-all duration-300 hover:bg-white hover:border-blue-200 hover:shadow-sm"
-              >
-                <p className="text-[15px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors duration-300 mb-1">
-                  {tech.name}
-                </p>
-                <p className="text-[11px] tracking-[0.1em] uppercase text-slate-400">
-                  {tech.category}
-                </p>
-              </motion.div>
-            ))}
-          </div>
+          <p className="max-w-[480px] text-[14.5px] leading-[1.7] text-slate-600 lg:text-right">
+            We choose technology based on what best serves the product — consistent,
+            maintainable and enterprise-ready.
+          </p>
         </div>
+
+        <div ref={gridRef} className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {groups.map((g, idx) => (
+            <motion.div
+              key={g.title}
+              initial={{ opacity: 0, y: 14 }}
+              animate={gridInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6, delay: idx * 0.06, ease: [0.16, 1, 0.3, 1] }}
+              className="rounded-[14px] bg-[#F8F8F8] border border-[#E5E7EB] p-5 hover:bg-white hover:border-[#0057B8]/20 hover:shadow-[0_8px_24px_rgba(0, 87, 184, 0.06)] transition-all duration-300"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0057B8]" />
+                <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-[#071A33]">{g.title}</p>
+              </div>
+              <div className="space-y-2.5">
+                {g.items.map((it) => (
+                  <div key={it} className="flex items-center gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://cdn.simpleicons.org/${slugFor(it)}/0B2A5B`}
+                      alt={it}
+                      width={16}
+                      height={16}
+                      className="w-4 h-4 object-contain opacity-70"
+                      loading="lazy"
+                    />
+                    <span className="text-[13.5px] font-medium tracking-[-0.01em] text-slate-700">{it}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : {}}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-8 flex flex-wrap items-center gap-3 pt-6 border-t border-slate-100"
+        >
+          <span className="inline-flex items-center gap-2 text-[11px] tracking-[0.08em] uppercase text-slate-400 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Clean architecture · Secure · Observable
+          </span>
+          <span className="hidden sm:inline text-slate-200">—</span>
+          <span className="text-[11px] tracking-[0.08em] uppercase text-slate-400">Battle-tested across industries</span>
+        </motion.div>
       </div>
     </section>
   );
+}
+
+function slugFor(name: string): string {
+  const map: Record<string, string> = {
+    "React": "react",
+    "Next.js": "nextdotjs",
+    ".NET": "dotnet",
+    "Java": "openjdk",
+    "Spring Boot": "springboot",
+    "Node.js": "nodedotjs",
+    "Python": "python",
+    "PostgreSQL": "postgresql",
+    "MySQL": "mysql",
+    "MongoDB": "mongodb",
+    "AWS": "amazonaws",
+    "Docker": "docker",
+    "Kubernetes": "kubernetes",
+    "React Native": "react",
+    "Flutter": "flutter",
+    "Git": "git",
+    "GitHub": "github",
+    "Figma": "figma",
+  };
+  return map[name] ?? name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }

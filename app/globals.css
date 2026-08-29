@@ -3,10 +3,13 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --color-blue-primary: #2563eb;
-  --color-blue-hover: #1d4ed8;
-  --color-blue-light: #eff6ff;
-  --color-blue-subtle: #dbeafe;
+  --color-blue-primary: #0057B8;
+  --color-blue-deep: #003B7A;
+  --color-blue-light: #EAF4FF;
+  --color-blue-subtle: #D4E8FF;
+  --color-dark: #071A33;
+  --color-muted: #6B7280;
+  --color-border: #E5E7EB;
 }
 
 html {
@@ -17,15 +20,15 @@ html {
 body {
   background: #ffffff;
   color: #1e293b;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.15);
-  color: #1e293b;
+  background: rgba(0, 87, 184, 0.15);
+  color: #003B7A;
 }
 
 * {
@@ -33,18 +36,17 @@ body {
   scrollbar-color: #cbd5e1 transparent;
 }
 
-/* Subtle architectural utilities */
 .grid-pattern {
   background-image:
-    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 59, 122, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 59, 122, 0.04) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
 .grid-pattern-light {
   background-image:
-    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 59, 122, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 59, 122, 0.03) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 

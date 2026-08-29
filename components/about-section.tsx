@@ -3,134 +3,110 @@
 import { motion } from "framer-motion";
 import { useInView } from "@/hooks/use-in-view";
 
-const capabilities = [
-  {
-    title: "Product Engineering",
-    description:
-      "End-to-end product development from concept to launch. We build software that solves real problems.",
-  },
-  {
-    title: "Digital Experiences",
-    description:
-      "Interfaces that feel intuitive, look exceptional, and keep users engaged from the first interaction.",
-  },
-  {
-    title: "Scalable Systems",
-    description:
-      "Architecture designed to grow with your business. Clean code, robust infrastructure, lasting solutions.",
-  },
-];
-
 export function AboutSection() {
-  const { ref: sectionRef, isInView } = useInView();
-  const { ref: capRef, isInView: capInView } = useInView({ threshold: 0.2 });
+  const { ref, isInView } = useInView();
 
   return (
-    <section id="about" className="relative py-24 md:py-32 bg-white overflow-hidden">
-      {/* subtle architectural top divider */}
-      <div className="absolute top-0 left-6 lg:left-12 right-6 lg:right-12 h-px bg-slate-100" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-px bg-blue-600 hidden md:block" />
-
-      <div ref={sectionRef} className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-          <div>
+    <section id="about" className="relative bg-white overflow-hidden">
+      <div ref={ref} className="max-w-[1440px] mx-auto px-6 lg:px-10 py-16 md:py-24 lg:py-28">
+        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+          {/* left — editorial heading */}
+          <div className="lg:col-span-6">
             <motion.span
-              initial={{ opacity: 0 }}
-              animate={isInView ? { opacity: 1 } : {}}
+              initial={{ opacity: 0, y: 8 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-blue-600 mb-8"
+              className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-6"
             >
-              <span className="w-8 h-px bg-blue-600" />
-              About
+              <span className="w-8 h-px bg-[#0057B8]" />
+              Who We Are
             </motion.span>
 
             <motion.h2
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 18 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="text-[clamp(1.8rem,3.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em] text-slate-900"
+              transition={{ duration: 0.8, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[clamp(1.9rem,3.6vw,2.85rem)] font-bold leading-[1.02] tracking-[-0.03em] text-[#071A33]"
             >
-              We turn complex ideas
+              Technology
               <br />
-              into simple digital
+              <span className="font-light">that moves</span>
               <br />
-              products.
+              businesses forward.
             </motion.h2>
-          </div>
-
-          <div className="lg:pt-2">
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="text-[15px] leading-[1.7] text-slate-600 mb-6"
-            >
-              Corex IT is a software engineering studio focused on building
-              high-quality digital products. We partner with startups, scale-ups,
-              and enterprises to design, develop, and deploy software that drives
-              real business outcomes.
-            </motion.p>
-
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.7, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="text-[15px] leading-[1.7] text-slate-500"
-            >
-              Our engineering-first approach means we don&apos;t just write code.
-              We architect solutions. Every project is built with clean code,
-              modern patterns, and a commitment to long-term maintainability.
-            </motion.p>
 
             <motion.div
               initial={{ opacity: 0 }}
               animate={isInView ? { opacity: 1 } : {}}
-              transition={{ duration: 0.7, delay: 0.5 }}
-              className="mt-8 flex items-center gap-8 pt-6 border-t border-slate-100"
+              transition={{ duration: 0.6, delay: 0.22 }}
+              className="mt-8 flex gap-4"
             >
+              <span className="hidden sm:block w-px self-stretch bg-[#E5E7EB] shrink-0" />
               <div>
-                <p className="text-[22px] font-semibold tracking-[-0.02em] text-slate-900 leading-none">50+</p>
-                <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1">Projects shipped</p>
-              </div>
-              <span className="w-px h-10 bg-slate-200" />
-              <div>
-                <p className="text-[22px] font-semibold tracking-[-0.02em] text-slate-900 leading-none">12+</p>
-                <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1">Years engineering</p>
-              </div>
-              <span className="w-px h-10 bg-slate-200 hidden sm:block" />
-              <div className="hidden sm:block">
-                <p className="text-[22px] font-semibold tracking-[-0.02em] text-slate-900 leading-none">99%</p>
-                <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1">Client retention</p>
+                <p className="text-[15px] leading-[1.7] text-slate-600 max-w-[520px]">
+                  Corex IT is a Sri Lankan software engineering company helping
+                  enterprises and growing businesses transform ideas into reliable,
+                  scalable digital products.
+                </p>
+                <p className="text-[15px] leading-[1.7] text-slate-500 mt-4 max-w-[520px]">
+                  From strategy and design to development, deployment and long-term
+                  support, we deliver with engineering discipline, modern architecture
+                  and a commitment to measurable business outcomes.
+                </p>
+                <div className="mt-8 grid grid-cols-3 gap-6 pt-6 border-t border-slate-100 max-w-[480px]">
+                  <div>
+                    <p className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33] leading-none">50+</p>
+                    <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1.5">Projects shipped</p>
+                  </div>
+                  <div className="border-l border-slate-100 pl-6">
+                    <p className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33] leading-none">12+</p>
+                    <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1.5">Years engineering</p>
+                  </div>
+                  <div className="border-l border-slate-100 pl-6">
+                    <p className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33] leading-none">99%</p>
+                    <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-1.5">Client retention</p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
-        </div>
 
-        <div ref={capRef} className="mt-16 md:mt-20 grid md:grid-cols-3 gap-5">
-          {capabilities.map((cap, i) => (
-            <motion.div
-              key={cap.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={capInView ? { opacity: 1, y: 0 } : {}}
-              transition={{
-                duration: 0.6,
-                delay: i * 0.1,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              className="group relative p-7 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-[0_4px_20px_rgba(15,23,42,0.06)] transition-all duration-300"
-            >
-              <div className="absolute top-0 left-7 right-7 h-px bg-blue-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-              <div className="text-[11px] font-semibold tracking-[0.14em] uppercase text-blue-600 mb-4">
-                0{i + 1}
+          {/* right — large visual */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.8, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-6"
+          >
+            <div className="relative rounded-[20px] overflow-hidden bg-[#071A33] p-1 shadow-[0_20px_60px_rgba(17,17,17,0.18)]">
+              <div className="rounded-[16px] overflow-hidden bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1100&q=80"
+                  alt="Corex IT technology team collaboration"
+                  className="w-full h-[360px] md:h-[440px] object-cover"
+                  loading="lazy"
+                />
               </div>
-              <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-slate-900 mb-2.5">
-                {cap.title}
-              </h3>
-              <p className="text-[13px] leading-[1.6] text-slate-500">
-                {cap.description}
-              </p>
-            </motion.div>
-          ))}
+              {/* floating stat */}
+              <div className="absolute -bottom-4 -left-4 md:bottom-6 md:-left-6 bg-white rounded-2xl border border-slate-200 shadow-[0_12px_32px_rgba(15,23,42,0.12)] px-5 py-4 hidden sm:flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-[#EAF4FF] border border-[#D4E8FF] flex items-center justify-center text-[#0057B8]">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                    <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
+                  </svg>
+                </span>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#071A33] leading-none">Enterprise-grade delivery</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Secure · Scalable · Compliant</p>
+                </div>
+              </div>
+            </div>
+            {/* blue accent strip */}
+            <div className="mt-4 flex items-center gap-3 text-[11px] tracking-[0.08em] uppercase text-slate-400 font-medium">
+              <span className="w-8 h-px bg-[#0057B8]" />
+              Colombo · Singapore · Serving global clients
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>

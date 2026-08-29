@@ -3,96 +3,79 @@
 import { motion } from "framer-motion";
 import { useInView } from "@/hooks/use-in-view";
 
-interface Project {
-  id: number;
+type Project = {
+  id: string;
   title: string;
   category: string;
-  description: string;
-  techStack: string[];
+  desc: string;
+  tech: string[];
+  image: string;
   year: string;
-}
+};
 
 const projects: Project[] = [
   {
-    id: 1,
+    id: "nexus",
     title: "Nexus Analytics",
-    category: "Web Application",
-    description:
-      "Real-time analytics platform helping enterprises visualize complex data streams with interactive dashboards and drill-down capabilities.",
-    techStack: ["React", "Next.js", "D3.js", "Node.js", "PostgreSQL"],
+    category: "Web Application — Finance",
+    desc: "Real-time analytics platform for enterprise data — interactive dashboards, drill-downs and sub-40ms queries for finance teams.",
+    tech: ["React", "Next.js", "Node.js", "PostgreSQL"],
+    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
     year: "2024",
   },
   {
-    id: 2,
+    id: "marketplace",
     title: "MarketPlace Pro",
-    category: "E-commerce Platform",
-    description:
-      "Full-featured marketplace with vendor management, payment processing, inventory tracking, and real-time order management.",
-    techStack: ["React", "Next.js", "Stripe", "Node.js", "MongoDB"],
+    category: "E-Commerce Platform — Retail",
+    desc: "Full-featured marketplace with vendor management, payments, inventory and real-time order tracking at scale.",
+    tech: ["React", "Next.js", "MongoDB", "Stripe"],
+    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=80",
     year: "2024",
   },
   {
-    id: 3,
+    id: "taskflow",
     title: "TaskFlow",
-    category: "Mobile Application",
-    description:
-      "Productivity app for task management with seamless sync, drag-and-drop workflows, and intelligent notifications across devices.",
-    techStack: ["React Native", "Node.js", "Firebase", "TypeScript"],
+    category: "Mobile Application — Productivity",
+    desc: "Cross-platform productivity app with sync, drag-and-drop workflows and intelligent notifications.",
+    tech: ["React Native", "Firebase", "TypeScript"],
+    image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7dfb?auto=format&fit=crop&w=1200&q=80",
     year: "2023",
   },
   {
-    id: 4,
-    title: "HealthCare Portal",
-    category: "Healthcare Platform",
-    description:
-      "Patient management system with appointment scheduling, medical records, telehealth integration, and HIPAA-compliant data handling.",
-    techStack: ["Next.js", ".NET", "SQL Server", "Azure"],
+    id: "health",
+    title: "CarePortal",
+    category: "Healthcare Platform — Enterprise",
+    desc: "Patient management with scheduling, medical records, telehealth and HIPAA-compliant data handling.",
+    tech: [".NET", "Next.js", "SQL Server", "Azure"],
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80",
     year: "2023",
   },
 ];
 
 export function ProjectsSection() {
-  const { ref: sectionRef, isInView } = useInView();
+  const { ref } = useInView();
 
   return (
-    <section id="projects" className="py-24 md:py-36 bg-slate-50">
-      <div ref={sectionRef} className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-16 md:mb-24">
+    <section id="projects" className="relative bg-[#F8F8F8] overflow-hidden border-y border-slate-100">
+      <div ref={ref} className="max-w-[1440px] mx-auto px-6 lg:px-10 py-16 md:py-20">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
           <div>
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={isInView ? { opacity: 1 } : {}}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 text-[11px] font-medium tracking-[0.2em] uppercase text-blue-600 mb-8"
-            >
-              <span className="w-8 h-px bg-blue-600" />
+            <span className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-4">
+              <span className="w-8 h-px bg-[#0057B8]" />
               Projects
-            </motion.span>
-
-            <motion.h2
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.1] tracking-[-0.02em] text-slate-900"
-            >
+            </span>
+            <h2 className="text-[clamp(1.8rem,3.4vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.03em] text-[#071A33]">
               Selected work.
-            </motion.h2>
+            </h2>
           </div>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-[14px] leading-relaxed text-slate-500 max-w-md md:text-right"
-          >
-            A selection of projects that showcase our ability to deliver across
-            industries and technology stacks.
-          </motion.p>
+          <p className="max-w-[480px] text-[14.5px] leading-[1.6] text-slate-600 md:text-right">
+            Enterprise projects that showcase our ability to deliver across industries and stacks.
+          </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {projects.map((project, i) => (
-            <ProjectCard key={project.id} project={project} index={i} />
+        <div className="space-y-6">
+          {projects.map((p, i) => (
+            <ProjectRow key={p.id} project={p} index={i} reverse={i % 2 === 1} />
           ))}
         </div>
       </div>
@@ -100,63 +83,47 @@ export function ProjectsSection() {
   );
 }
 
-function ProjectCard({ project, index }: { project: Project; index: number }) {
+function ProjectRow({ project, index, reverse }: { project: Project; index: number; reverse: boolean }) {
   const { ref, isInView } = useInView({ threshold: 0.2 });
 
   return (
-    <motion.article
+    <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 18 }}
       animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{
-        duration: 0.8,
-        delay: index * 0.1,
-        ease: [0.16, 1, 0.3, 1],
-      }}
-      className="group relative p-8 md:p-10 rounded-xl bg-white border border-slate-200 transition-all duration-300 hover:border-slate-300 hover:shadow-[0_8px_32px_rgba(15,23,42,0.08)]"
+      transition={{ duration: 0.7, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }}
+      className={`group grid lg:grid-cols-12 gap-0 overflow-hidden rounded-[18px] bg-white border border-slate-200 hover:border-slate-300 hover:shadow-[0_12px_40px_rgba(15,23,42,0.08)] transition-all duration-400`}
     >
-      <div className="flex items-start justify-between mb-6">
-        <span className="text-[11px] font-medium tracking-[0.15em] uppercase text-slate-400">
-          {project.category}
-        </span>
-        <span className="text-[11px] font-medium tracking-[0.1em] text-slate-300">
-          {project.year}
+      <div className={`relative h-[260px] md:h-[320px] lg:h-auto overflow-hidden bg-slate-100 ${reverse ? "lg:order-2" : ""} lg:col-span-7`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={project.image} alt={project.title} className="w-full h-full object-cover transition-transform duration-[900ms] group-hover:scale-[1.04]" loading="lazy" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#071A33]/30 via-transparent to-transparent opacity-60 group-hover:opacity-70 transition-opacity" />
+        <span className="absolute top-4 left-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur border border-white/20 text-[11px] font-semibold tracking-[0.06em] uppercase text-[#071A33]">
+          {project.year} · {project.category}
         </span>
       </div>
 
-      <h3 className="text-[22px] md:text-[26px] font-semibold tracking-[-0.02em] text-slate-900 mb-4">
-        {project.title}
-      </h3>
-
-      <p className="text-[14px] leading-relaxed text-slate-500 mb-8">
-        {project.description}
-      </p>
-
-      <div className="flex flex-wrap gap-2 mb-8">
-        {project.techStack.map((tech) => (
-          <span
-            key={tech}
-            className="px-3 py-1 text-[11px] font-medium tracking-[0.05em] text-slate-500 bg-slate-50 rounded-full border border-slate-100 transition-colors duration-300 group-hover:text-blue-700 group-hover:bg-blue-50 group-hover:border-blue-100"
-          >
-            {tech}
-          </span>
-        ))}
+      <div className={`p-7 md:p-8 flex flex-col ${reverse ? "lg:order-1" : ""} lg:col-span-5`}>
+        <span className="text-[11px] tracking-[0.12em] uppercase text-[#0057B8] font-semibold">Project {String(index + 1).padStart(2, "0")}</span>
+        <h3 className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33] mt-2">{project.title}</h3>
+        <p className="text-[13.5px] leading-[1.6] text-slate-600 mt-3 flex-1">{project.desc}</p>
+        <div className="flex flex-wrap gap-2 mt-5">
+          {project.tech.map((t) => (
+            <span key={t} className="px-3 py-1 rounded-full bg-[#F8F8F8] border border-[#E5E7EB] text-[11px] font-medium tracking-[0.04em] text-slate-600">
+              {t}
+            </span>
+          ))}
+        </div>
+        <div className="mt-6 flex items-center justify-between pt-5 border-t border-slate-100">
+          <a href="#contact" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#071A33] group-hover:text-[#0057B8] transition-colors">
+            View Project
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="transition-transform group-hover:translate-x-0.5">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </a>
+          <span className="text-[11px] tracking-[0.06em] uppercase text-slate-400">Corex IT</span>
+        </div>
       </div>
-
-      <div className="flex items-center justify-between pt-6 border-t border-slate-100">
-        <span className="text-[13px] font-medium text-slate-400 group-hover:text-blue-600 transition-colors duration-300">
-          View Case Study
-        </span>
-        <svg
-          className="w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-all duration-300 group-hover:translate-x-1"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        >
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
-      </div>
-    </motion.article>
+    </motion.div>
   );
 }

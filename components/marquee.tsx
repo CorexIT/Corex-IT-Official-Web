@@ -21,7 +21,7 @@ function TickerRow({ direction }: { direction: "left" | "right" }) {
             <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-500 mx-7">
               {item}
             </span>
-            <span className="w-1 h-1 rounded-full bg-blue-600 mx-1 shrink-0" aria-hidden />
+            <span className="w-1 h-1 rounded-full bg-[#0057B8] mx-1 shrink-0" aria-hidden />
           </span>
         ))}
       </div>
@@ -33,7 +33,7 @@ export function Marquee() {
   return (
     <section aria-label="Brand ticker" className="relative bg-white border-y border-slate-100 overflow-hidden">
       {/* subtle technical accent line */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-100/60 to-transparent pointer-events-none hidden md:block" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4E8FF]/60 to-transparent pointer-events-none hidden md:block" />
       <div className="relative">
         <TickerRow direction="left" />
       </div>
