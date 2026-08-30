@@ -11,21 +11,13 @@ export function FinalCta() {
     <section className="relative overflow-hidden bg-[#071A33]">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 opacity-[0.06] bg-[linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] bg-[size:56px_56px]" />
-        <div className="absolute -top-20 right-[-8%] w-[640px] h-[640px] rounded-full bg-[#0057B8]/20 blur-[50px]" />
-        <div className="absolute -bottom-20 left-[-6%] w-[520px] h-[520px] rounded-full bg-white/[0.04] blur-[40px]" />
+        <div className="absolute -top-20 right-[-8%] w-[640px] h-[640px] rounded-none bg-[#0057B8]/20 blur-[50px]" />
+        <div className="absolute -bottom-20 left-[-6%] w-[520px] h-[520px] rounded-none bg-white/[0.04] blur-[40px]" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
       </div>
 
       <div ref={ref} className="relative max-w-[1440px] mx-auto px-6 lg:px-10 py-16 md:py-20 lg:py-24 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#8AB6FF] mb-6"
-        >
-          <span className="w-8 h-px bg-[#0057B8]" />
-          Have a project in mind?
-        </motion.div>
+
 
         <motion.h2
           initial={{ opacity: 0, y: 16 }}
@@ -55,7 +47,7 @@ export function FinalCta() {
         >
           <Link
             href="/contact"
-            className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-white text-[#071A33] text-[14px] font-semibold hover:bg-white/95 transition-colors shadow-sm"
+            className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-none bg-white text-[#071A33] text-[14px] font-semibold hover:bg-white/95 transition-colors shadow-sm"
           >
             Contact Us
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -64,13 +56,13 @@ export function FinalCta() {
           </Link>
           <Link
             href="/projects"
-            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full border border-white/20 text-white text-[14px] font-medium hover:bg-white/10 transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-none border border-white/20 text-white text-[14px] font-medium hover:bg-white/10 transition-colors"
           >
             View Projects
           </Link>
           <Link
             href="/blogs"
-            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full border border-white/20 text-white text-[14px] font-medium hover:bg-white/10 transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-none border border-white/20 text-white text-[14px] font-medium hover:bg-white/10 transition-colors"
           >
             Read Our Insights
           </Link>
@@ -83,7 +75,7 @@ export function FinalCta() {
           className="mt-10 flex flex-wrap items-center justify-center gap-6 pt-6 border-t border-white/10 max-w-[640px] mx-auto"
         >
           <span className="inline-flex items-center gap-2 text-[11px] tracking-[0.08em] uppercase text-white/50 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="w-1.5 h-1.5 rounded-none bg-emerald-400" />
             Available for new projects
           </span>
           <span className="hidden sm:inline text-white/20">—</span>

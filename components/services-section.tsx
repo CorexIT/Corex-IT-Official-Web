@@ -38,10 +38,7 @@ export function ServicesSection() {
         {/* header */}
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
           <div>
-            <span className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-4">
-              <span className="w-8 h-px bg-[#0057B8]" />
-              Services
-            </span>
+
             <h2 className="text-[clamp(1.8rem,3.4vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.03em] text-[#071A33]">
               Enterprise-grade
               <br />

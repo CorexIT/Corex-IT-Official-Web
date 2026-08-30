@@ -12,15 +12,7 @@ export function AboutSection() {
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
           {/* left — editorial heading */}
           <div className="lg:col-span-6">
-            <motion.span
-              initial={{ opacity: 0, y: 8 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-6"
-            >
-              <span className="w-8 h-px bg-[#0057B8]" />
-              Who We Are
-            </motion.span>
+
 
             <motion.h2
               initial={{ opacity: 0, y: 18 }}
@@ -101,9 +93,8 @@ export function AboutSection() {
                 </div>
               </div>
             </div>
-            {/* blue accent strip */}
+            {/* location strip */}
             <div className="mt-4 flex items-center gap-3 text-[11px] tracking-[0.08em] uppercase text-slate-400 font-medium">
-              <span className="w-8 h-px bg-[#0057B8]" />
               Colombo · Singapore · Serving global clients
             </div>
           </motion.div>

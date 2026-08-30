@@ -20,15 +20,7 @@ export function BlueFeatureSection() {
       <div ref={ref} className="relative max-w-[1440px] mx-auto px-6 lg:px-10 py-14 md:py-20 lg:py-24">
         <div className="grid lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7">
-            <motion.span
-              initial={{ opacity: 0, y: 8 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#8AB6FF] mb-5"
-            >
-              <span className="w-8 h-px bg-[#0057B8]" />
-              Enterprise Impact
-            </motion.span>
+
 
             <motion.h2
               initial={{ opacity: 0, y: 16 }}
@@ -57,10 +49,10 @@ export function BlueFeatureSection() {
               transition={{ duration: 0.7, delay: 0.24 }}
               className="mt-8 flex flex-wrap gap-3"
             >
-              <Link href="/contact" className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-white text-[#071A33] text-[14px] font-semibold hover:bg-white/95 transition-colors shadow-sm">
+              <Link href="/contact" className="inline-flex items-center gap-2 px-7 py-3 rounded-none bg-white text-[#071A33] text-[14px] font-semibold hover:bg-white/95 transition-colors shadow-sm">
                 Talk to an expert <ArrowUpRight className="w-4 h-4" />
               </Link>
-              <Link href="/#services" className="inline-flex items-center gap-2 px-7 py-3 rounded-full border border-white/20 text-white text-[14px] font-medium hover:bg-white/10 transition-colors">
+              <Link href="/#services" className="inline-flex items-center gap-2 px-7 py-3 rounded-none border border-white/20 text-white text-[14px] font-medium hover:bg-white/10 transition-colors">
                 Explore services
               </Link>
             </motion.div>

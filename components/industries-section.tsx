@@ -60,10 +60,7 @@ export function IndustriesSection() {
       <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-16 md:py-20 lg:py-24">
         {/* header */}
         <div className="max-w-[720px] mb-10">
-          <span className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-4">
-            <span className="w-8 h-px bg-[#0057B8]" />
-            Industries We Serve
-          </span>
+
           <h2 className="text-[clamp(1.9rem,3.6vw,2.7rem)] font-bold leading-[1.05] tracking-[-0.03em] text-[#071A33]">
             Digital Solutions for
             <br />
@@ -137,7 +134,7 @@ export function IndustriesSection() {
                   <p className="text-[13px] font-semibold text-[#071A33]">Have a business challenge?</p>
                   <p className="text-[12px] leading-[1.6] text-slate-600 mt-1">Let&apos;s explore how Corex IT can help.</p>
                 </div>
-                <Link href="/contact" className="shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#0057B8] text-white text-[13px] font-semibold hover:bg-[#003B7A] transition-colors">
+                <Link href="/contact" className="shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-none bg-[#0057B8] text-white text-[13px] font-semibold hover:bg-[#003B7A] transition-colors">
                   Let&apos;s Talk <ArrowUpRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -234,7 +231,7 @@ export function IndustriesSection() {
                 <p className="text-[13px] font-semibold">Have a business challenge?</p>
                 <p className="text-[11px] text-white/60">We&apos;d love to help.</p>
               </div>
-              <Link href="/contact" className="shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-white text-[#071A33] text-[13px] font-semibold">
+              <Link href="/contact" className="shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-none bg-white text-[#071A33] text-[13px] font-semibold">
                 Let&apos;s Talk <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>

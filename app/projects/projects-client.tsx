@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { projects, projectCategories } from "@/lib/projects";
+import { ProjectsHero } from "@/components/projects-hero";
 
 export default function ProjectsClient() {
   const [active, setActive] = useState<(typeof projectCategories)[number]>("All Projects");
@@ -14,37 +15,17 @@ export default function ProjectsClient() {
 
   return (
     <div className="bg-white">
-      <section className="bg-[#F8F8F8] border-b border-slate-100">
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-12 md:py-16">
-          <span className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-4">
-            <span className="w-8 h-px bg-[#0057B8]" />
-            Projects
-          </span>
-          <h1 className="text-[clamp(2rem,4vw,3rem)] font-bold leading-[1.02] tracking-[-0.03em] text-[#071A33] max-w-[720px]">
-            Work that reflects
-            <br />
-            <span className="font-light">how we build.</span>
-          </h1>
-          <p className="text-[15px] leading-[1.7] text-slate-600 max-w-[560px] mt-4">
-            A selection of conceptual showcases illustrating our approach to web,
-            mobile and enterprise software. Each case study highlights
-            architecture, features and the technologies behind it.
-          </p>
-          <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 mt-3">
-            Demo showcase — replace with verified Corex IT client work when available.
-          </p>
-        </div>
-      </section>
+      <ProjectsHero />
 
       {/* secondary navigation / filter */}
-      <div className="sticky top-[68px] md:top-[84px] z-20 bg-white/90 backdrop-blur border-b border-slate-100">
+      <div id="projects-content" className="sticky top-[68px] md:top-[84px] z-20 bg-white/90 backdrop-blur border-b border-slate-100">
         <div className="max-w-[1440px] mx-auto px-6 lg:px-10">
           <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
             {projectCategories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActive(cat)}
-                className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-medium border transition-colors ${
+                className={`shrink-0 px-4 py-2 rounded-none text-[13px] font-medium border transition-colors ${
                   active === cat
                     ? "bg-[#0057B8] border-[#0057B8] text-white"
                     : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-[#071A33]"
@@ -66,10 +47,10 @@ export default function ProjectsClient() {
               In the meantime, explore our services and technologies or get in touch to discuss a private demo.
             </p>
             <div className="mt-6 flex justify-center gap-3">
-              <Link href="/services" className="px-6 py-2.5 rounded-full bg-[#0057B8] text-white text-[13px] font-semibold hover:bg-[#003B7A] transition-colors">
+              <Link href="/services" className="px-6 py-2.5 rounded-none bg-[#0057B8] text-white text-[13px] font-semibold hover:bg-[#003B7A] transition-colors">
                 Explore Services
               </Link>
-              <Link href="/contact" className="px-6 py-2.5 rounded-full border border-slate-200 bg-white text-[#071A33] text-[13px] font-semibold hover:border-slate-300 transition-colors">
+              <Link href="/contact" className="px-6 py-2.5 rounded-none border border-slate-200 bg-white text-[#071A33] text-[13px] font-semibold hover:border-slate-300 transition-colors">
                 Contact Us
               </Link>
             </div>

@@ -128,7 +128,7 @@ export function HeroSection() {
           >
             <Link
               href="/contact"
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#0057B8] text-white text-[14px] font-semibold hover:bg-[#003B7A] transition-colors shadow-[0_10px_28px_rgba(0, 87, 184, 0.38)]"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-none bg-[#0057B8] text-white text-[14px] font-semibold hover:bg-[#003B7A] transition-colors shadow-[0_10px_28px_rgba(0, 87, 184, 0.38)]"
             >
               Start a Project
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -137,7 +137,7 @@ export function HeroSection() {
             </Link>
             <Link
               href="/#services"
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-white/10 backdrop-blur border border-white/25 text-white text-[14px] font-semibold hover:bg-white hover:text-[#071A33] hover:border-white transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-none bg-white/10 backdrop-blur border border-white/25 text-white text-[14px] font-semibold hover:bg-white hover:text-[#071A33] hover:border-white transition-colors"
             >
               Explore Our Services
             </Link>
@@ -168,7 +168,7 @@ export function HeroSection() {
             key={i}
             aria-label={`Go to slide ${i + 1}`}
             onClick={() => setIndex(i)}
-            className={`transition-all duration-300 rounded-full ${
+            className={`transition-all duration-300 rounded-none ${
               i === index ? "w-8 h-1.5 bg-white" : "w-6 h-1.5 bg-white/40 hover:bg-white/70"
             }`}
           />

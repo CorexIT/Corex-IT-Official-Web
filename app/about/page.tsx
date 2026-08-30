@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AboutHero } from "@/components/about-hero";
 
 export const metadata: Metadata = {
   title: "About — Corex IT",
@@ -10,30 +11,10 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div className="bg-white">
-      {/* hero intro */}
-      <section className="relative overflow-hidden bg-[#F8F8F8] border-b border-slate-100">
-        <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(to_right,#071A33_1px,transparent_1px),linear-gradient(to_bottom,#071A33_1px,transparent_1px)] bg-[size:64px_64px]" />
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-14 md:py-20">
-          <span className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-4">
-            <span className="w-8 h-px bg-[#0057B8]" />
-            Who We Are
-          </span>
-          <h1 className="text-[clamp(2rem,4vw,3.2rem)] font-bold leading-[1.02] tracking-[-0.03em] text-[#071A33] max-w-[720px]">
-            Technology
-            <br />
-            <span className="font-light">that moves</span> businesses forward.
-          </h1>
-          <p className="text-[15px] leading-[1.7] text-slate-600 max-w-[640px] mt-6">
-            Corex IT is a Sri Lankan software engineering company. We partner
-            with ambitious businesses to transform ideas into reliable, scalable
-            digital products — from strategy and design to engineering,
-            deployment and long-term support.
-          </p>
-        </div>
-      </section>
+      <AboutHero />
 
       {/* vision / mission / what we do */}
-      <section className="max-w-[1440px] mx-auto px-6 lg:px-10 py-12 md:py-16">
+      <section id="about-content" className="max-w-[1440px] mx-auto px-6 lg:px-10 py-12 md:py-16">
         <div className="grid lg:grid-cols-12 gap-8">
           <div className="lg:col-span-4">
             <h2 className="text-[11px] font-semibold tracking-[0.14em] uppercase text-[#0057B8] mb-3">Our Vision</h2>
@@ -115,7 +96,7 @@ export default function AboutPage() {
             scalable and ready to support business growth.
           </p>
           <div className="mt-6">
-            <Link href="/contact" className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-[#071A33] text-[13px] font-semibold hover:bg-white/95 transition-colors">
+            <Link href="/contact" className="inline-flex items-center gap-2 px-6 py-2.5 rounded-none bg-white text-[#071A33] text-[13px] font-semibold hover:bg-white/95 transition-colors">
               Let&apos;s talk
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" />

@@ -68,15 +68,7 @@ export function ContactSection() {
       <div className="max-w-[1440px] mx-auto px-6 lg:px-10">
         <div ref={sectionRef} className="grid lg:grid-cols-2 gap-16 lg:gap-24">
           <div>
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={isInView ? { opacity: 1 } : {}}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-8"
-            >
-              <span className="w-8 h-px bg-[#0057B8]" />
-              Contact
-            </motion.span>
+
 
             <motion.h2
               initial={{ opacity: 0, y: 30 }}
@@ -204,7 +196,7 @@ export function ContactSection() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto px-8 py-3.5 text-[13px] font-semibold tracking-[0.02em] bg-[#0057B8] text-white rounded-full transition-all duration-300 hover:bg-[#003B7A] disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-8 py-3.5 text-[13px] font-semibold tracking-[0.02em] bg-[#0057B8] text-white rounded-none transition-all duration-300 hover:bg-[#003B7A] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? "Sending..." : "Send Message"}
                 </button>

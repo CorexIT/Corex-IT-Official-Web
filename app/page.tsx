@@ -5,8 +5,8 @@ import { BlueFeatureSection } from "@/components/blue-feature-section";
 import { IndustriesSection } from "@/components/industries-section";
 import { WhyCorexSection } from "@/components/why-corex-section";
 import { ProcessSection } from "@/components/process-section";
+import { TestimonialsSection } from "@/components/testimonials-section";
 import { FinalCta } from "@/components/final-cta";
-import { Footer } from "@/components/footer-section";
 import Link from "next/link";
 
 function HomeIntro() {
@@ -14,10 +14,7 @@ function HomeIntro() {
     <section className="bg-white border-b border-slate-100">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-10 md:py-12">
         <div className="max-w-[720px]">
-          <span className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-3">
-            <span className="w-8 h-px bg-[#0057B8]" />
-            Who We Are
-          </span>
+
           <p className="text-[15px] leading-[1.7] text-slate-600">
             Corex IT is a Sri Lankan software engineering partner helping
             businesses design, build and scale reliable digital products — with
@@ -49,8 +46,8 @@ export default function Home() {
       <IndustriesSection />
       <WhyCorexSection />
       <ProcessSection />
+      <TestimonialsSection />
       <FinalCta />
-      <Footer />
     </>
   );
 }

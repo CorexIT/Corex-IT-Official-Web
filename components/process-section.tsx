@@ -20,10 +20,7 @@ export function ProcessSection() {
     <section id="process" className="relative bg-white overflow-hidden border-t border-slate-100">
       <div ref={ref} className="max-w-[1440px] mx-auto px-6 lg:px-10 py-16 md:py-20">
         <div className="max-w-[720px] mb-10">
-          <span className="inline-flex items-center gap-3 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#0057B8] mb-4">
-            <span className="w-8 h-px bg-[#0057B8]" />
-            Process
-          </span>
+
           <h2 className="text-[clamp(1.8rem,3.4vw,2.6rem)] font-bold leading-[1.05] tracking-[-0.03em] text-[#071A33]">
             A proven path
             <br />
