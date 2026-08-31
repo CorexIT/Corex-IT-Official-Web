@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Public Testimonials: public can read published only via where(status=="published") + orderBy(createdAt)
+    // Spec: getDocs(query(collection(db,"testimonials"), where("status","==","published"), orderBy("createdAt","desc"))) must succeed for public.
+    // Using single read rule with resource check ensures query is allowed only when every returned doc is published.
+    // Admin (request.auth != null) can read all, including hidden.
+    match /testimonials/{docId} {
+      allow get, list: if request.auth != null || resource.data.status == "published";
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Public Contact Form: visitor NOT logged in can create; must NOT read/update/delete
+    // Admin can list/read/update/delete (onSnapshot/query/getDocs/updateDoc/deleteDoc)
+    match /contact_messages/{docId} {
+      allow create: if true;
+      allow get, list, update, delete: if request.auth != null;
+    }
+
+    // Admin Settings: settings/company via setDoc(...,{merge:true}) and getDoc
+    // Public may read if footer needs it; only admin can write
+    match /settings/{docId} {
+      allow get, list: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Explicitly also allow settings/company sub-case (redundant but clear)
+    match /settings/company {
+      allow get: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Fallback deny all else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

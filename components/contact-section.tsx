@@ -1,46 +1,79 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { useInView } from "@/hooks/use-in-view";
 import { Mail, MapPin, ArrowUpRight } from "lucide-react";
+import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { COLLECTIONS, SETTINGS_DOC_ID, type CompanySettings } from "@/lib/firestore-types";
+import { defaultCompanySettings } from "@/lib/site-settings";
 
 interface FormData {
-  name: string;
+  fullName: string;
   email: string;
+  phone: string;
+  company: string;
   subject: string;
   message: string;
 }
 
 interface FormErrors {
-  name?: string;
+  fullName?: string;
   email?: string;
+  phone?: string;
+  company?: string;
   subject?: string;
   message?: string;
 }
 
 export function ContactSection() {
   const { ref: sectionRef, isInView } = useInView();
+  const [companyInfo, setCompanyInfo] = useState<CompanySettings>(defaultCompanySettings);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const snap = await getDoc(doc(db, COLLECTIONS.settings, SETTINGS_DOC_ID));
+        if (!cancelled && snap.exists()) setCompanyInfo({ ...defaultCompanySettings, ...(snap.data() as CompanySettings) } as CompanySettings);
+      } catch (err) {
+        console.error("Failed to load company settings", err);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
   const [formData, setFormData] = useState<FormData>({
-    name: "",
+    fullName: "",
     email: "",
+    phone: "",
+    company: "",
     subject: "",
     message: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
-    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
+    else if (formData.fullName.trim().length < 2) newErrors.fullName = "Name must be at least 2 characters";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email address";
     }
+    if (formData.phone && formData.phone.trim().length < 7) {
+      newErrors.phone = "Enter a valid phone number";
+    }
+    if (formData.company && formData.company.length > 100) {
+      newErrors.company = "Company must be under 100 characters";
+    }
     if (!formData.subject.trim()) newErrors.subject = "Subject is required";
     if (!formData.message.trim()) newErrors.message = "Message is required";
+    else if (formData.message.trim().length < 10) newErrors.message = "Message must be at least 10 characters";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -49,15 +82,34 @@ export function ContactSection() {
     e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setIsSubmitting(false);
-    setSubmitted(true);
-    setFormData({ name: "", email: "", subject: "", message: "" });
+    setSubmitError(null);
+    try {
+      await addDoc(collection(db, COLLECTIONS.contactMessages), {
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        company: formData.company.trim(),
+        subject: formData.subject.trim(),
+        message: formData.message.trim(),
+        status: "new",
+        createdAt: serverTimestamp(),
+      });
+      setSubmitted(true);
+      setFormData({ fullName: "", email: "", phone: "", company: "", subject: "", message: "" });
+    } catch (err: unknown) {
+      console.error("Failed to submit contact message", err);
+      const msg = err instanceof Error ? err.message : "Failed to send message. Please try again.";
+      // Common cause: firestore.rules must allow create on contact_messages for unauthenticated users
+      setSubmitError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if (submitError) setSubmitError(null);
   };
 
   const inputClass =
@@ -68,8 +120,6 @@ export function ContactSection() {
       <div className="max-w-[1440px] mx-auto px-6 lg:px-10">
         <div ref={sectionRef} className="grid lg:grid-cols-2 gap-16 lg:gap-24">
           <div>
-
-
             <motion.h2
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -103,7 +153,7 @@ export function ContactSection() {
                 </div>
                 <div>
                   <p className="text-[12px] text-slate-400 mb-0.5">Email</p>
-                  <p className="text-[14px] text-slate-700 font-medium">hello@corexit.com</p>
+                  <p className="text-[14px] text-slate-700 font-medium">{companyInfo.email}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -112,12 +162,13 @@ export function ContactSection() {
                 </div>
                 <div>
                   <p className="text-[12px] text-slate-400 mb-0.5">Location</p>
-                  <p className="text-[14px] text-slate-700 font-medium">Colombo, Sri Lanka</p>
+                  <p className="text-[14px] text-slate-700 font-medium">{companyInfo.address}</p>
+                  {companyInfo.phone && <p className="text-[12px] text-slate-500">{companyInfo.phone}</p>}
                 </div>
               </div>
 
               <a
-                href="mailto:hello@corexit.com"
+                href={`mailto:${companyInfo.email}`}
                 className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#071A33] hover:text-[#0057B8] transition-colors duration-300 mt-4 group"
               >
                 Start a conversation
@@ -132,7 +183,7 @@ export function ContactSection() {
             transition={{ duration: 0.8, delay: 0.3 }}
           >
             {submitted ? (
-                <div className="h-full flex items-center justify-center p-12 rounded-2xl bg-[#F8F8F8] border border-[#E5E7EB]">
+              <div className="h-full flex items-center justify-center p-12 rounded-2xl bg-[#F8F8F8] border border-[#E5E7EB]">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-full bg-[#D4E8FF] flex items-center justify-center mx-auto mb-5">
                     <svg className="w-5 h-5 text-[#071A33]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -143,24 +194,30 @@ export function ContactSection() {
                   <p className="text-[14px] text-slate-500">
                     Thank you for reaching out. We&apos;ll respond within 24 hours.
                   </p>
+                  <button
+                    onClick={() => setSubmitted(false)}
+                    className="mt-6 text-[13px] font-semibold text-[#0057B8] hover:text-[#003B7A]"
+                  >
+                    Send another message
+                  </button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Name</label>
+                    <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Full Name *</label>
                     <input
                       type="text"
-                      value={formData.name}
-                      onChange={(e) => handleChange("name", e.target.value)}
+                      value={formData.fullName}
+                      onChange={(e) => handleChange("fullName", e.target.value)}
                       className={inputClass}
-                      placeholder="Your name"
+                      placeholder="Your full name"
                     />
-                    {errors.name && <p className="text-red-500 text-[11px] mt-1.5">{errors.name}</p>}
+                    {errors.fullName && <p className="text-red-500 text-[11px] mt-1.5">{errors.fullName}</p>}
                   </div>
                   <div>
-                    <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Email</label>
+                    <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Email *</label>
                     <input
                       type="email"
                       value={formData.email}
@@ -171,8 +228,32 @@ export function ContactSection() {
                     {errors.email && <p className="text-red-500 text-[11px] mt-1.5">{errors.email}</p>}
                   </div>
                 </div>
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Phone</label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => handleChange("phone", e.target.value)}
+                      className={inputClass}
+                      placeholder="+94 7X XXX XXXX"
+                    />
+                    {errors.phone && <p className="text-red-500 text-[11px] mt-1.5">{errors.phone}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Company</label>
+                    <input
+                      type="text"
+                      value={formData.company}
+                      onChange={(e) => handleChange("company", e.target.value)}
+                      className={inputClass}
+                      placeholder="Your company"
+                    />
+                    {errors.company && <p className="text-red-500 text-[11px] mt-1.5">{errors.company}</p>}
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Subject</label>
+                  <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Subject *</label>
                   <input
                     type="text"
                     value={formData.subject}
@@ -183,7 +264,7 @@ export function ContactSection() {
                   {errors.subject && <p className="text-red-500 text-[11px] mt-1.5">{errors.subject}</p>}
                 </div>
                 <div>
-                  <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Message</label>
+                  <label className="block text-[12px] text-slate-500 mb-2 tracking-[0.05em]">Message *</label>
                   <textarea
                     value={formData.message}
                     onChange={(e) => handleChange("message", e.target.value)}
@@ -193,6 +274,9 @@ export function ContactSection() {
                   />
                   {errors.message && <p className="text-red-500 text-[11px] mt-1.5">{errors.message}</p>}
                 </div>
+                {submitError && (
+                  <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{submitError}</p>
+                )}
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -200,6 +284,7 @@ export function ContactSection() {
                 >
                   {isSubmitting ? "Sending..." : "Send Message"}
                 </button>
+                <p className="text-[11px] text-slate-400">Stored securely in Firestore · contact_messages · Admin will review shortly.</p>
               </form>
             )}
           </motion.div>

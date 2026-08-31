@@ -2,8 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { COLLECTIONS, SETTINGS_DOC_ID } from "@/lib/firestore-types";
+import { defaultCompanySettings } from "@/lib/site-settings";
 
 const leftLinks = [
   { label: "About", href: "/about" },
@@ -20,8 +25,29 @@ const rightLinks = [
 const mobileLinks = [...leftLinks, ...rightLinks];
 
 export function Navbar() {
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith("/corexit-admin");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [companyEmail, setCompanyEmail] = useState(defaultCompanySettings.email);
+  const [companyAddress, setCompanyAddress] = useState(defaultCompanySettings.address);
+
+  useEffect(() => {
+    if (isAdminRoute) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const snap = await getDoc(doc(db, COLLECTIONS.settings, SETTINGS_DOC_ID));
+        if (!cancelled && snap.exists()) {
+          const data = snap.data() as Partial<typeof defaultCompanySettings>;
+          if (data.email) setCompanyEmail(data.email);
+          if (data.address) setCompanyAddress(data.address);
+        }
+      } catch { /* keep defaults */ }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [isAdminRoute]);
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 20);
@@ -35,6 +61,9 @@ export function Navbar() {
       document.body.style.overflow = "";
     };
   }, [isMobileOpen]);
+
+  // Private admin routes must NOT show public Navbar (spec: no Login/Admin button anywhere public, private URLs only)
+  if (isAdminRoute) return null;
 
   return (
     <>
@@ -145,7 +174,7 @@ export function Navbar() {
                   Let&apos;s Talk — Start a Project
                   <ArrowRight size={16} />
                 </Link>
-                <p className="text-center text-[13px] text-slate-400 mt-5 font-medium">hello@corexit.com · Colombo, Sri Lanka</p>
+                <p className="text-center text-[13px] text-slate-400 mt-5 font-medium">{companyEmail} · {companyAddress}</p>
               </motion.div>
             </nav>
           </motion.div>
