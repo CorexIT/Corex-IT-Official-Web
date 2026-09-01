@@ -4,11 +4,19 @@ service cloud.firestore {
 
     // Public Testimonials: public can read published only via where(status=="published") + orderBy(createdAt)
     // Spec: getDocs(query(collection(db,"testimonials"), where("status","==","published"), orderBy("createdAt","desc"))) must succeed for public.
-    // Using single read rule with resource check ensures query is allowed only when every returned doc is published.
-    // Admin (request.auth != null) can read all, including hidden.
+    // Admin (request.auth != null) can read all, including hidden and pending, and can create/update/delete.
+    // Anonymous users MUST NOT directly write testimonials (enforced via server API + transaction)
     match /testimonials/{docId} {
       allow get, list: if request.auth != null || resource.data.status == "published";
       allow create, update, delete: if request.auth != null;
+    }
+
+    // One-time testimonial invites: NOT publicly readable/writable.
+    // All invite operations (create/list/validate/submit) are performed via secure server-side API routes
+    // using Firebase Admin SDK (bypasses rules). Browser direct access is denied to prevent enumeration and token leakage.
+    // Only Admin SDK can read/write this collection.
+    match /testimonial_invites/{token} {
+      allow read, write: if false;
     }
 
     // Public Contact Form: visitor NOT logged in can create; must NOT read/update/delete

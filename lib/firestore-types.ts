@@ -3,7 +3,8 @@ import type { Timestamp } from "firebase/firestore";
 
 // testimonials collection
 // status controls public visibility: only "published" are shown on public site
-export type TestimonialStatus = "published" | "hidden";
+// "pending" = customer-submitted via one-time link, awaiting admin review (not visible publicly)
+export type TestimonialStatus = "published" | "hidden" | "pending";
 
 export type Testimonial = {
   id: string;
@@ -59,10 +60,38 @@ export type CompanySettings = {
   [key: string]: string;
 };
 
+// One-time testimonial invite links (admin-generated, single-use)
+// Secure model: raw token is never stored; only tokenHash is persisted.
+// Doc id = tokenHash, fields follow spec: status, createdAt, expiresAt, usedAt, createdBy, tokenHash
+export type TestimonialInviteStatus = "unused" | "used";
+
+export type TestimonialInvite = {
+  id: string; // tokenHash (doc id)
+  tokenHash: string;
+  token?: string; // deprecated legacy: plain token (kept for backward compat read)
+  status: TestimonialInviteStatus;
+  createdAt: Timestamp | Date | string;
+  expiresAt: Timestamp | Date | string;
+  usedAt?: Timestamp | Date | string | null;
+  createdBy?: string | null;
+  note?: string;
+  // legacy boolean fields for compat
+  used?: boolean;
+  tokenHashLegacy?: string;
+};
+
+export type TestimonialInviteInput = {
+  token: string;
+  tokenHash?: string;
+  expiresAt?: Date | null;
+  note?: string;
+};
+
 export const COLLECTIONS = {
   testimonials: "testimonials",
   contactMessages: "contact_messages",
   settings: "settings",
+  testimonialInvites: "testimonial_invites",
 } as const;
 
 export const SETTINGS_DOC_ID = "company";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import {
   collection,
   doc,
@@ -23,6 +23,7 @@ import {
   COLLECTIONS,
   SETTINGS_DOC_ID,
   type Testimonial,
+  type TestimonialInvite,
   type ContactMessage,
   type CompanySettings,
 } from "@/lib/firestore-types";
@@ -47,6 +48,7 @@ function formatDate(value: Timestamp | Date | string | undefined): string {
 export default function AdminDashboard() {
   const router = useRouter();
   const [authLoading, setAuthLoading] = useState(true);
+  const [authUser, setAuthUser] = useState<User | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("dashboard");
 
@@ -64,12 +66,21 @@ export default function AdminDashboard() {
     designation: "",
     comment: "",
     rating: 5,
-    status: "published" as "published" | "hidden",
+    status: "published" as "published" | "hidden" | "pending",
     imageUrl: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [tSubmitting, setTSubmitting] = useState(false);
   const [tError, setTError] = useState<string | null>(null);
+
+  // One-time testimonial invite links
+  const [invites, setInvites] = useState<TestimonialInvite[]>([]);
+  const [inviteNote, setInviteNote] = useState("");
+  const [inviteExpiryDays, setInviteExpiryDays] = useState("7");
+  const [generatingInvite, setGeneratingInvite] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   // Messages filter/search
   const [search, setSearch] = useState("");
@@ -78,10 +89,13 @@ export default function AdminDashboard() {
   // Settings edit
   const [settingsSaving, setSettingsSaving] = useState(false);
 
-  // Auth guard
+  // Auth guard — reuse existing Firebase Auth instance, wait for initialization
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
+      setAuthUser(u);
       if (!u) {
+        setUserEmail(null);
+        setAuthLoading(false);
         router.replace("/corexit-admin-login");
       } else {
         setUserEmail(u.email);
@@ -91,59 +105,140 @@ export default function AdminDashboard() {
     return () => unsub();
   }, [router]);
 
-  // Fetch data — only after auth is confirmed (do NOT run while auth.currentUser === null)
+  // Fetch data — only after auth is confirmed (wait for onAuthStateChanged)
+  // Each collection is fetched independently so a failure in one (e.g., invites API) does NOT block the others.
   async function fetchAll() {
-    // Guard: ensure auth is ready and user is authenticated
-    if (auth.currentUser === null) {
+    const user = auth.currentUser;
+    if (!user) {
       console.error("Failed to load admin data: auth not ready or unauthenticated — waiting for onAuthStateChanged");
+      setInviteError("Admin authentication required.");
       return;
     }
     setLoadingData(true);
+
+    // 1) Testimonials (existing admin CRUD must continue to work)
     try {
-      const [tSnap, mSnap, sSnap] = await Promise.all([
-        getDocs(query(collection(db, COLLECTIONS.testimonials), orderBy("createdAt", "desc"))).catch((err) => {
-          console.error("Failed to load testimonials (admin)", err);
-          throw err;
-        }),
-        getDocs(query(collection(db, COLLECTIONS.contactMessages), orderBy("createdAt", "desc"))).catch((err) => {
-          console.error("Failed to load admin messages", err);
-          throw err;
-        }),
-        getDoc(doc(db, COLLECTIONS.settings, SETTINGS_DOC_ID)).catch((err) => {
-          console.error("Failed to load settings", err);
-          throw err;
-        }),
-      ]);
-      setTestimonials(
-        tSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Testimonial, "id">) }))
-      );
-      setMessages(
-        mSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ContactMessage, "id">) }))
-      );
+      const tSnap = await getDocs(query(collection(db, COLLECTIONS.testimonials), orderBy("createdAt", "desc")));
+      setTestimonials(tSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Testimonial, "id">) })));
+    } catch (err) {
+      console.error("Failed to load testimonials (admin)", err);
+      // keep previous testimonials (or empty) so panel still renders
+    }
+
+    // 2) Contact messages
+    try {
+      const mSnap = await getDocs(query(collection(db, COLLECTIONS.contactMessages), orderBy("createdAt", "desc")));
+      setMessages(mSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ContactMessage, "id">) })));
+    } catch (err) {
+      console.error("Failed to load contact messages (admin)", err);
+    }
+
+    // 3) Settings
+    try {
+      const sSnap = await getDoc(doc(db, COLLECTIONS.settings, SETTINGS_DOC_ID));
       if (sSnap.exists()) {
         setSettings({ ...defaultCompanySettings, ...(sSnap.data() as CompanySettings) });
       }
-    } catch (e) {
-      console.error("Failed to load admin data", e);
-    } finally {
-      setLoadingData(false);
+    } catch (err) {
+      console.error("Failed to load settings (admin)", err);
     }
+
+    // 4) Invites via secure server API (Admin SDK) — additive only, must NOT block existing panel
+    // Uses existing Firebase Auth instance; waits for onAuthStateChanged (authUser) — never localStorage/URL
+    // Sends Authorization: Bearer <ID_TOKEN> exactly as required
+    try {
+      // Reuse the user from onAuthStateChanged (authUser) or fallback to auth.currentUser
+      // auth.currentUser can be temporarily null right after page load, so we wait for authUser.
+      const inviteUser = user;
+      if (!inviteUser) {
+        console.error("Failed to load testimonial invites (admin) — no authenticated user");
+        setInviteError("Admin authentication required.");
+        setInvites([]);
+      } else {
+        let idToken: string | null = null;
+        try {
+          // Obtain ID token from the initialized Firebase user (existing Auth instance)
+          idToken = await inviteUser.getIdToken();
+        } catch (tokenErr) {
+          console.error("Failed to load testimonial invites (admin) — getIdToken failed", tokenErr);
+          setInviteError("Admin authentication token is invalid. Please sign in again.");
+        }
+        if (!idToken) {
+          console.error("Failed to load testimonial invites (admin) — no ID token");
+          setInviteError("Admin authentication token is invalid. Please sign in again.");
+          setInvites([]);
+        } else {
+          let res: Response | null = null;
+          try {
+            res = await fetch("/api/testimonial-invites", {
+              headers: { Authorization: `Bearer ${idToken}` },
+              cache: "no-store",
+            });
+          } catch (fetchErr) {
+            console.error("Failed to load testimonial invites (admin) — fetch network error", fetchErr);
+            setInviteError("Admin authentication token is invalid. Please sign in again.");
+            setInvites([]);
+            res = null;
+          }
+          if (res) {
+            if (res.ok) {
+              try {
+                const data = await res.json();
+                const fetched = (data.invites as TestimonialInvite[]) || [];
+                const normalized = fetched.map((inv) => {
+                  const status = (inv.status as string) || ((inv as unknown as { used?: boolean }).used ? "used" : "unused");
+                  return { ...inv, status: status as TestimonialInvite["status"], used: status === "used" };
+                });
+                setInvites(normalized as TestimonialInvite[]);
+                setInviteError(null);
+              } catch (parseErr) {
+                console.error("Failed to load testimonial invites (admin) — JSON parse error", parseErr);
+                setInvites([]);
+              }
+            } else {
+              let errText = "";
+              try { errText = await res.text(); } catch { /* ignore */ }
+              if (res.status === 401) {
+                console.error("Failed to load testimonial invites (admin) — 401 Unauthorized", errText);
+                setInviteError("Admin authentication token is invalid. Please sign in again.");
+              } else if (res.status === 503) {
+                console.error("Failed to load testimonial invites (admin) — 503 Admin SDK not configured", errText);
+                setInviteError(errText || "Firebase Admin not configured on server");
+              } else {
+                console.error("Failed to load testimonial invites (admin)", res.status, errText);
+                setInviteError("Failed to load testimonial invites.");
+              }
+              setInvites([]);
+            }
+          }
+        }
+      }
+    } catch (inviteErr) {
+      console.error("Failed to load testimonial invites (admin) — unexpected", inviteErr);
+      setInviteError("Admin authentication token is invalid. Please sign in again.");
+      setInvites([]);
+    }
+
+    setLoadingData(false);
   }
 
   useEffect(() => {
-    if (!authLoading && auth.currentUser !== null) fetchAll();
-  }, [authLoading]);
+    // Wait for Firebase Auth state initialization (onAuthStateChanged) — authUser is set there.
+    // Do NOT call with auth.currentUser that may be temporarily null after page load.
+    if (!authLoading && authUser) fetchAll();
+  }, [authLoading, authUser]);
 
   // Dashboard stats
   const stats = useMemo(() => {
     const totalTestimonials = testimonials.length;
     const published = testimonials.filter((t) => t.status === "published").length;
     const hidden = testimonials.filter((t) => t.status === "hidden").length;
+    const pending = testimonials.filter((t) => t.status === "pending").length;
     const totalMessages = messages.length;
     const newMessages = messages.filter((m) => m.status === "new").length;
     const readMessages = messages.filter((m) => m.status === "read").length;
     const repliedMessages = messages.filter((m) => m.status === "replied").length;
-    return { totalTestimonials, published, hidden, totalMessages, newMessages, readMessages, repliedMessages };
+    return { totalTestimonials, published, hidden, pending, totalMessages, newMessages, readMessages, repliedMessages };
   }, [testimonials, messages]);
 
   // Filtered messages
@@ -195,13 +290,152 @@ export default function AdminDashboard() {
   };
 
   const handleToggleStatus = async (t: Testimonial) => {
-    const newStatus = t.status === "published" ? "hidden" : "published";
+    // Pending testimonials: publish them; otherwise toggle published/hidden
+    const newStatus: Testimonial["status"] = t.status === "pending" ? "published" : t.status === "published" ? "hidden" : "published";
     try {
       await updateDoc(doc(db, COLLECTIONS.testimonials, t.id), { status: newStatus });
       setTestimonials((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: newStatus } : x)));
     } catch (err) {
       console.error("Failed to update testimonial (toggle status)", err);
       alert(err instanceof Error ? err.message : "Failed to update testimonial");
+    }
+  };
+
+  const handlePublishPending = async (t: Testimonial) => {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.testimonials, t.id), { status: "published" });
+      setTestimonials((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: "published" as const } : x)));
+    } catch (err) {
+      console.error("Failed to publish pending testimonial", err);
+      alert(err instanceof Error ? err.message : "Failed to publish testimonial");
+    }
+  };
+
+  // One-time invite link generation (admin only) — via secure server API (Admin SDK)
+  // Must use existing Firebase Auth instance and send Authorization: Bearer <ID_TOKEN>
+  const handleGenerateInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteError(null);
+    setGeneratedLink(null);
+    setGeneratingInvite(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setInviteError("Admin authentication required.");
+        throw new Error("Admin authentication required.");
+      }
+      let idToken: string | null = null;
+      try {
+        idToken = await user.getIdToken();
+      } catch {
+        setInviteError("Admin authentication token is invalid. Please sign in again.");
+        throw new Error("Admin authentication token is invalid. Please sign in again.");
+      }
+      if (!idToken) {
+        setInviteError("Admin authentication token is invalid. Please sign in again.");
+        throw new Error("Admin authentication token is invalid. Please sign in again.");
+      }
+      const res = await fetch("/api/testimonial-invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ note: inviteNote.trim(), expiryDays: Number(inviteExpiryDays) || 7 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) {
+          setInviteError("Admin authentication token is invalid. Please sign in again.");
+          throw new Error("Admin authentication token is invalid. Please sign in again.");
+        }
+        throw new Error((data.error as string) || `Failed to generate invite (${res.status})`);
+      }
+      const rawToken = data.token as string;
+      const url = (data.url as string) || `${window.location.origin}/testimonial/${rawToken}`;
+      setGeneratedLink(url);
+      // Refresh invites list from server (authoritative)
+      try {
+        const listRes = await fetch("/api/testimonial-invites", { headers: { Authorization: `Bearer ${idToken}` }, cache: "no-store" });
+        if (listRes.ok) {
+          const jd = await listRes.json();
+          const fetched = (jd.invites as TestimonialInvite[]) || [];
+          const normalized = fetched.map((inv) => ({ ...inv, status: ((inv.status as string) || (inv.used ? "used" : "unused")) as TestimonialInvite["status"], used: ((inv.status as string) || (inv.used ? "used" : "unused")) === "used" }));
+          setInvites(normalized as TestimonialInvite[]);
+        } else {
+          // optimistic fallback
+          const expiresAt = new Date(Date.now() + (Number(inviteExpiryDays) || 7) * 24 * 60 * 60 * 1000);
+          setInvites((prev) => [{ id: data.tokenHash as string, tokenHash: data.tokenHash as string, status: "unused" as const, createdAt: new Date().toISOString(), expiresAt: expiresAt.toISOString(), usedAt: null, createdBy: userEmail || "", note: inviteNote.trim() || "", used: false } as unknown as TestimonialInvite, ...prev]);
+        }
+      } catch { /* ignore */ }
+      setInviteNote("");
+    } catch (err) {
+      console.error("Failed to generate invite", err);
+      setInviteError(err instanceof Error ? err.message : "Failed to generate invite link.");
+    } finally {
+      setGeneratingInvite(false);
+    }
+  };
+
+  const handleCopyLink = async (link: string) => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedLink(link);
+      setTimeout(() => setCopiedLink(null), 2000);
+    } catch {
+      // fallback
+      const el = document.createElement("input");
+      el.value = link;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopiedLink(link);
+      setTimeout(() => setCopiedLink(null), 2000);
+    }
+  };
+
+  const handleDeleteInvite = async (tokenOrHash: string) => {
+    if (!confirm("Delete this invite link? This cannot be undone.")) return;
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Admin authentication required.");
+        return;
+      }
+      let idToken: string | null = null;
+      try {
+        idToken = await user.getIdToken();
+      } catch {
+        alert("Admin authentication token is invalid. Please sign in again.");
+        return;
+      }
+      if (!idToken) {
+        alert("Admin authentication token is invalid. Please sign in again.");
+        return;
+      }
+      const res = await fetch("/api/testimonial-invites/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ tokenHash: tokenOrHash, token: tokenOrHash }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert("Admin authentication token is invalid. Please sign in again.");
+          return;
+        }
+        if (res.status === 404) {
+          // Already deleted — remove from UI gracefully, no fatal error
+          setInvites((prev) => prev.filter((x) => x.id !== tokenOrHash && (x as unknown as { tokenHash: string }).tokenHash !== tokenOrHash && x.token !== tokenOrHash));
+          if (generatedLink && generatedLink.includes(tokenOrHash)) setGeneratedLink(null);
+          return;
+        }
+        throw new Error((data.error as string) || `Failed to delete invite (${res.status})`);
+      }
+      // Success — remove from UI immediately, no console error
+      setInvites((prev) => prev.filter((x) => x.id !== tokenOrHash && (x as unknown as { tokenHash: string }).tokenHash !== tokenOrHash && x.token !== tokenOrHash));
+      if (generatedLink && generatedLink.includes(tokenOrHash)) setGeneratedLink(null);
+    } catch (err) {
+      console.error("Failed to delete invite", err);
+      alert(err instanceof Error ? err.message : "Failed to delete invite");
     }
   };
 
@@ -381,9 +615,10 @@ export default function AdminDashboard() {
               <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33]">Dashboard</h1>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                  { label: "Total Testimonials", value: stats.totalTestimonials, sub: `${stats.published} published · ${stats.hidden} hidden` },
+                  { label: "Total Testimonials", value: stats.totalTestimonials, sub: `${stats.published} published · ${stats.hidden} hidden · ${stats.pending} pending` },
                   { label: "Published Testimonials", value: stats.published, sub: "Visible on Home Page" },
                   { label: "Hidden Testimonials", value: stats.hidden, sub: "Not visible publicly" },
+                  { label: "Pending Testimonials", value: stats.pending, sub: "Awaiting review (one-time link)" },
                   { label: "Total Contact Messages", value: stats.totalMessages, sub: `${stats.newMessages} new · ${stats.readMessages} read` },
                   { label: "New Messages", value: stats.newMessages, sub: "Require attention" },
                   { label: "Read Messages", value: stats.readMessages, sub: `${stats.repliedMessages} replied` },
@@ -406,7 +641,7 @@ export default function AdminDashboard() {
                           <p className="text-[13px] font-medium text-[#071A33] truncate">{t.name} <span className="text-slate-400 font-normal">· {t.rating}★</span></p>
                           <p className="text-[11px] text-slate-500 truncate">{t.designation || t.company || "—"} · {t.status}</p>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-semibold tracking-[0.06em] uppercase ${t.status === "published" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-amber-50 text-amber-700 border border-amber-100"}`}>{t.status}</span>
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-semibold tracking-[0.06em] uppercase ${t.status === "published" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : t.status === "pending" ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>{t.status}</span>
                       </div>
                     ))}
                     {testimonials.length === 0 && <p className="text-[13px] text-slate-400">No testimonials yet.</p>}
@@ -433,7 +668,90 @@ export default function AdminDashboard() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33]">Testimonials</h1>
-                <span className="text-[12px] text-slate-500">{testimonials.length} total</span>
+                <span className="text-[12px] text-slate-500">{testimonials.length} total · {stats.pending} pending</span>
+              </div>
+
+              {/* One-time Customer Link Generator */}
+              <div className="bg-white border border-slate-200 rounded-[16px] p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[13px] font-semibold tracking-[0.04em] uppercase text-slate-600">One-time Customer Link</h3>
+                  <span className="text-[11px] text-slate-400">Single-use · Image upload NOT included for customer</span>
+                </div>
+                <p className="text-[12px] leading-[1.6] text-slate-500">Generate a single-use link to invite a customer to submit a testimonial. Customer form has NO image upload (name, company, position/role, testimonial, optional rating only). Submissions are created as <span className="font-semibold text-amber-700">pending</span> for you to review, publish, or add images via the admin form below.</p>
+                <form onSubmit={handleGenerateInvite} className="grid sm:grid-cols-[1fr_140px_auto] gap-3 items-end">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Note (optional, for your reference)</label>
+                    <input value={inviteNote} onChange={(e) => setInviteNote(e.target.value)} placeholder="e.g. Client: Acme Inc — project X" className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" maxLength={120} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Expiry</label>
+                    <select value={inviteExpiryDays} onChange={(e) => setInviteExpiryDays(e.target.value)} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]">
+                      <option value="1">1 day</option>
+                      <option value="3">3 days</option>
+                      <option value="7">7 days</option>
+                      <option value="14">14 days</option>
+                      <option value="30">30 days</option>
+                    </select>
+                  </div>
+                  <button type="submit" disabled={generatingInvite} className="px-5 py-2.5 rounded-xl bg-[#071A33] text-white text-[13px] font-semibold hover:bg-black disabled:opacity-50 whitespace-nowrap">
+                    {generatingInvite ? "Generating…" : "Generate Link"}
+                  </button>
+                </form>
+                {inviteError && <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{inviteError}</p>}
+                {generatedLink && (
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-semibold tracking-[0.06em] uppercase text-emerald-700">Generated one-time link (copy now)</p>
+                      <p className="text-[12px] font-mono text-emerald-800 break-all mt-1">{generatedLink}</p>
+                      <p className="text-[11px] text-emerald-600 mt-1">Customer will submit without image upload. You can add image after they submit.</p>
+                    </div>
+                    <button onClick={() => handleCopyLink(generatedLink)} className="shrink-0 px-4 py-2 rounded-lg bg-[#0057B8] text-white text-[12px] font-medium hover:bg-[#003B7A]">{copiedLink === generatedLink ? "Copied!" : "Copy"}</button>
+                  </div>
+                )}
+                {/* Invites list */}
+                {invites.length > 0 && (
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                      <p className="text-[11px] font-semibold tracking-[0.06em] uppercase text-slate-500">Recent Invite Links ({invites.length})</p>
+                      <span className="text-[11px] text-slate-400">One-time · used/expired are blocked</span>
+                    </div>
+                    <div className="divide-y divide-slate-100 max-h-[240px] overflow-auto">
+                      {invites.slice(0, 20).map((inv) => {
+                        // Secure: raw token never stored; only tokenHash is persisted. For new invites, link cannot be reconstructed from list.
+                        // Legacy invites may have plain token in `token` field — support both.
+                        const isLegacyRaw = !!(inv as unknown as { token?: string }).token && (inv as unknown as { token: string }).token.length >= 32 && (inv as unknown as { token: string }).token !== (inv as unknown as { tokenHash?: string }).tokenHash;
+                        const displayToken = isLegacyRaw ? (inv as unknown as { token: string }).token : (inv as unknown as { tokenHash?: string }).tokenHash || inv.id;
+                        const link = isLegacyRaw ? `${typeof window !== "undefined" ? window.location.origin : ""}/testimonial/${displayToken}` : `Invite ${displayToken.slice(0, 12)}… (raw link shown once at generation)`;
+                        const status = (inv.status as string) || (inv.used ? "used" : "unused");
+                        const isUsed = status === "used" || !!inv.used;
+                        let isExpired = false;
+                        if (inv.expiresAt) {
+                          try {
+                            let d: Date | null = null;
+                            if (inv.expiresAt instanceof Timestamp) d = inv.expiresAt.toDate();
+                            else if (typeof inv.expiresAt === "string") d = new Date(inv.expiresAt as string);
+                            else d = new Date(inv.expiresAt as unknown as string);
+                            if (d && !Number.isNaN(d.getTime()) && d.getTime() < Date.now()) isExpired = true;
+                          } catch { /* ignore */ }
+                        }
+                        return (
+                          <div key={inv.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-mono text-slate-700 truncate">{link}</p>
+                              <p className="text-[11px] text-slate-400 truncate">{inv.note ? `${inv.note} · ` : ""}{formatDate(inv.createdAt)} {inv.expiresAt ? `· expires ${formatDate(inv.expiresAt)}` : ""}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase border ${isUsed ? "bg-slate-100 text-slate-500 border-slate-200" : isExpired ? "bg-red-50 text-red-600 border-red-100" : "bg-emerald-50 text-emerald-700 border-emerald-100"}`}>{isUsed ? "Used" : isExpired ? "Expired" : "Active"}</span>
+                              {isLegacyRaw && <button onClick={() => handleCopyLink(link)} className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">{copiedLink === link ? "Copied" : "Copy"}</button>}
+                              <button onClick={() => handleDeleteInvite((inv as unknown as { tokenHash?: string }).tokenHash || inv.id)} className="px-2.5 py-1 rounded-lg bg-red-50 border border-red-100 text-[11px] font-medium text-red-600 hover:bg-red-100">Delete</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {invites.length === 0 && <p className="text-[11px] text-slate-400">No invites generated yet. Links appear here after generation.</p>}
               </div>
 
               {/* Form */}
@@ -474,9 +792,10 @@ export default function AdminDashboard() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Status</label>
-                    <select value={tForm.status} onChange={(e) => setTForm((p) => ({ ...p, status: e.target.value as "published" | "hidden" }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]">
+                    <select value={tForm.status} onChange={(e) => setTForm((p) => ({ ...p, status: e.target.value as "published" | "hidden" | "pending" }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]">
                       <option value="published">Published (visible on Home)</option>
                       <option value="hidden">Hidden</option>
+                      <option value="pending">Pending (awaiting review)</option>
                     </select>
                   </div>
                   <div>
@@ -511,8 +830,13 @@ export default function AdminDashboard() {
                         <p className="text-[11px] text-slate-400 mt-1">{formatDate(t.createdAt)}</p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        <button onClick={() => handleToggleStatus(t)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border ${t.status === "published" ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}>
-                          {t.status === "published" ? "Hide" : "Publish"}
+                        {t.status === "pending" && (
+                          <button onClick={() => handlePublishPending(t)} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                            Approve & Publish
+                          </button>
+                        )}
+                        <button onClick={() => handleToggleStatus(t)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border ${t.status === "published" ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" : t.status === "pending" ? "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}>
+                          {t.status === "published" ? "Hide" : t.status === "pending" ? "Publish" : "Publish"}
                         </button>
                         <button onClick={() => handleEdit(t)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Edit</button>
                         <button onClick={() => handleDeleteTestimonial(t.id)} className="px-3 py-1.5 rounded-lg bg-red-50 border border-red-100 text-[11px] font-medium text-red-600 hover:bg-red-100">Delete</button>
