@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb, hashToken, getAdminMissingEnvHint } from "@/lib/firebase-admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
+export const runtime = 'nodejs';
 export const dynamic = "force-dynamic";
 
 function toDateSafe(expiresAt: unknown): Date | null {

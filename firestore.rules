@@ -33,6 +33,21 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null;
     }
 
+    // Website Images: managed by admin via Cloudinary + Firestore
+    // Public can read all images (public-facing content); only admin can create/update/delete
+    // NOTE: resource.data is NOT available in list rules — must use separate get/list
+    match /websiteImages/{docId} {
+      allow get: if request.auth != null || resource.data.isActive == true;
+      allow list: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Blogs: public can read all (public-facing articles); only admin can create/update/delete
+    match /blogs/{docId} {
+      allow get, list: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
     // Explicitly also allow settings/company sub-case (redundant but clear)
     match /settings/company {
       allow get: if true;

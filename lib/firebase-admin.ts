@@ -25,22 +25,47 @@ function parseServiceAccountKey(raw: string): Record<string, unknown> | null {
   if (!trimmed) return null;
   // Handle accidentally quoted JSON (e.g., FIREBASE_SERVICE_ACCOUNT_KEY='{"type":...}' or "...")
   if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-    trimmed = trimmed.slice(1, -1).trim();
+    try {
+      // Unwrap outer quotes and unescape inner quotes if needed
+      const unwrapped = trimmed.slice(1, -1).trim();
+      // If unwrapped is still JSON, use it
+      return JSON.parse(unwrapped) as Record<string, unknown>;
+    } catch {
+      // fall through to normal handling
+      trimmed = trimmed.slice(1, -1).trim();
+    }
   }
-  // Handle surrounding whitespace and stray < > if ever present (defensive)
-  if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
-    trimmed = trimmed.slice(1, -1).trim();
+  // Handle stray < > and var admin = require... wrappers (defensive for malformed .env)
+  // Example malformed: FIREBASE_SERVICE_ACCOUNT_KEY=<{ ... },> or > on next line
+  if (trimmed.includes('var admin') || trimmed.includes('require(')) {
+    return null;
   }
+  // Remove leading < and trailing > , commas
+  trimmed = trimmed.replace(/^<+\s*/, '').replace(/\s*>+\s*$/, '').trim();
+  // Remove trailing comma after closing } or ]
+  // Vercel: JSON may have been pasted with trailing comma due to JS object syntax
+  trimmed = trimmed.replace(/,\s*$/, '');
   // Try direct JSON
   try {
     return JSON.parse(trimmed) as Record<string, unknown>;
   } catch {
-    // Try base64-encoded JSON (common on Vercel when pasting file content)
+    // Try removing trailing commas before } or ] (e.g., {"a":1,})
     try {
-      const decoded = Buffer.from(trimmed, "base64").toString("utf-8");
-      return JSON.parse(decoded) as Record<string, unknown>;
+      const fixed = trimmed.replace(/,\s*([}\]])/g, '$1');
+      return JSON.parse(fixed) as Record<string, unknown>;
     } catch {
-      return null;
+      // Try base64-encoded JSON (common on Vercel when pasting file content)
+      try {
+        const decoded = Buffer.from(trimmed, "base64").toString("utf-8");
+        // Also handle base64 that was quoted
+        let dTrim = decoded.trim();
+        if ((dTrim.startsWith('"') && dTrim.endsWith('"')) || (dTrim.startsWith("'") && dTrim.endsWith("'"))) {
+          dTrim = dTrim.slice(1, -1).trim();
+        }
+        return JSON.parse(dTrim) as Record<string, unknown>;
+      } catch {
+        return null;
+      }
     }
   }
 }

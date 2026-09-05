@@ -92,7 +92,50 @@ export const COLLECTIONS = {
   contactMessages: "contact_messages",
   settings: "settings",
   testimonialInvites: "testimonial_invites",
+  websiteImages: "websiteImages",
+  blogs: "blogs",
 } as const;
 
 export const SETTINGS_DOC_ID = "company";
 export const SETTINGS_DOC_PATH = `${COLLECTIONS.settings}/${SETTINGS_DOC_ID}`;
+
+// websiteImages collection — managed via Cloudinary + Admin Image Manager
+export type WebsiteImageCategory = "hero" | "about" | "services" | "projects" | "blogs" | "testimonials" | "contact" | "general";
+
+export type WebsiteImage = {
+  id: string;
+  title: string;
+  category: WebsiteImageCategory;
+  imageUrl: string;
+  publicId: string;
+  cloudinaryFolder: string;
+  altText: string;
+  description: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Timestamp | Date | string;
+  updatedAt: Timestamp | Date | string;
+};
+
+// blogs collection — managed via Admin > Blog Management, consumed by public Blogs section
+export type Blog = {
+  id: string;
+  title: string;
+  authorName: string;
+  mediumUrl: string;
+  coverImage: string;
+  description: string;
+  category: string;
+  createdAt: Timestamp | Date | string;
+};
+
+// Curated defaults for the Admin Blog form dropdown. Extend this array to add categories.
+export const BLOG_CATEGORIES = [
+  "Development",
+  "Design",
+  "AI",
+  "Mobile",
+  "Web",
+  "Technology",
+  "Business",
+] as const;

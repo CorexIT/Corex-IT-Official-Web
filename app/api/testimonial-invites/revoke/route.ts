@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb, verifyAdminIdToken, hashToken, getAdminMissingEnvHint } from "@/lib/firebase-admin";
 
+export const runtime = 'nodejs';
 export const dynamic = "force-dynamic";
 
 // POST /api/testimonial-invites/revoke  body: { tokenHash } or { token }

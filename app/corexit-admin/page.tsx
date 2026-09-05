@@ -26,11 +26,18 @@ import {
   type TestimonialInvite,
   type ContactMessage,
   type CompanySettings,
+  type WebsiteImage,
+  type WebsiteImageCategory,
+  type Blog,
+  BLOG_CATEGORIES,
 } from "@/lib/firestore-types";
 import { defaultCompanySettings } from "@/lib/site-settings";
 
 // Types for admin UI
-type Tab = "dashboard" | "testimonials" | "messages" | "settings";
+type Tab = "dashboard" | "testimonials" | "messages" | "settings" | "images" | "blogs";
+
+const BLOG_COVER_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,image/avif";
+const BLOG_COVER_MAX_SIZE = 10 * 1024 * 1024; // 10MB — matches server
 
 function formatDate(value: Timestamp | Date | string | undefined): string {
   try {
@@ -89,6 +96,39 @@ export default function AdminDashboard() {
   // Settings edit
   const [settingsSaving, setSettingsSaving] = useState(false);
 
+  // Website Images state
+  const [images, setImages] = useState<WebsiteImage[]>([]);
+  const [imageFilter, setImageFilter] = useState<WebsiteImageCategory | "all">("all");
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageEditing, setImageEditing] = useState<WebsiteImage | null>(null);
+  const [imgForm, setImgForm] = useState({
+    title: "",
+    altText: "",
+    description: "",
+    category: "hero" as WebsiteImageCategory,
+    isActive: true,
+    sortOrder: 0,
+  });
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [imgError, setImgError] = useState<string | null>(null);
+  const [imgSuccess, setImgSuccess] = useState<string | null>(null);
+
+  // Blog Management state
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [blogEditing, setBlogEditing] = useState<Blog | null>(null);
+  const [bForm, setBForm] = useState({
+    title: "",
+    authorName: "",
+    mediumUrl: "",
+    coverImage: "",
+    description: "",
+    category: "",
+  });
+  const [blogSubmitting, setBlogSubmitting] = useState(false);
+  const [bError, setBError] = useState<string | null>(null);
+  const [bSuccess, setBSuccess] = useState<string | null>(null);
+  const [blogCoverUploading, setBlogCoverUploading] = useState(false);
+
   // Auth guard — reuse existing Firebase Auth instance, wait for initialization
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -143,7 +183,23 @@ export default function AdminDashboard() {
       console.error("Failed to load settings (admin)", err);
     }
 
-    // 4) Invites via secure server API (Admin SDK) — additive only, must NOT block existing panel
+    // 4) Website Images
+    try {
+      const iSnap = await getDocs(query(collection(db, COLLECTIONS.websiteImages), orderBy("createdAt", "desc")));
+      setImages(iSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WebsiteImage, "id">) })));
+    } catch (err) {
+      console.error("Failed to load website images (admin)", err);
+    }
+
+    // 5) Blogs
+    try {
+      const bSnap = await getDocs(query(collection(db, COLLECTIONS.blogs), orderBy("createdAt", "desc")));
+      setBlogs(bSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Blog, "id">) })));
+    } catch (err) {
+      console.error("Failed to load blogs (admin)", err);
+    }
+
+    // 5) Invites via secure server API (Admin SDK) — additive only, must NOT block existing panel
     // Uses existing Firebase Auth instance; waits for onAuthStateChanged (authUser) — never localStorage/URL
     // Sends Authorization: Bearer <ID_TOKEN> exactly as required
     try {
@@ -551,6 +607,449 @@ export default function AdminDashboard() {
     }
   };
 
+  // ── Website Images CRUD ──────────────────────────────────────────────────
+  const filteredImages = useMemo(() => {
+    if (imageFilter === "all") return images;
+    return images.filter((img) => img.category === imageFilter);
+  }, [images, imageFilter]);
+
+  const imageStats = useMemo(() => {
+    const total = images.length;
+    const active = images.filter((img) => img.isActive).length;
+    const byCategory: Record<string, number> = {};
+    images.forEach((img) => {
+      byCategory[img.category] = (byCategory[img.category] || 0) + 1;
+    });
+    return { total, active, byCategory };
+  }, [images]);
+
+  const resetImgForm = () => {
+    setImageEditing(null);
+    setImgForm({ title: "", altText: "", description: "", category: "hero", isActive: true, sortOrder: 0 });
+    setImgFile(null);
+    setImgError(null);
+  };
+
+  const handleUploadImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setImgError(null);
+    setImgSuccess(null);
+    if (!imgFile) {
+      setImgError("Please select an image file.");
+      return;
+    }
+    if (imgFile.size > 10 * 1024 * 1024) {
+      setImgError("Image must be under 10MB.");
+      return;
+    }
+    setImageUploading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setImgError("Admin authentication required.");
+        setImageUploading(false);
+        return;
+      }
+      const idToken = await user.getIdToken();
+      const fd = new FormData();
+      fd.append("file", imgFile);
+      fd.append("category", imgForm.category);
+      fd.append("title", imgForm.title);
+      fd.append("altText", imgForm.altText);
+      fd.append("description", imgForm.description);
+      fd.append("isActive", String(imgForm.isActive));
+      fd.append("sortOrder", String(imgForm.sortOrder));
+
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Upload failed (${res.status})`);
+      }
+      // Add the new image to state
+      if (data.documentId) {
+        const newImage: WebsiteImage = {
+          id: data.documentId,
+          title: data.title,
+          category: data.category,
+          imageUrl: data.secure_url,
+          publicId: data.public_id,
+          cloudinaryFolder: data.folder || "",
+          altText: data.altText || "",
+          description: data.description || "",
+          isActive: data.isActive,
+          sortOrder: data.sortOrder,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setImages((prev) => [newImage, ...prev]);
+      } else {
+        // Firestore doc creation failed, reload from server
+        const iSnap = await getDocs(query(collection(db, COLLECTIONS.websiteImages), orderBy("createdAt", "desc")));
+        setImages(iSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WebsiteImage, "id">) })));
+      }
+      resetImgForm();
+      setImgSuccess("Image uploaded successfully!");
+      setTimeout(() => setImgSuccess(null), 4000);
+    } catch (err) {
+      console.error("Failed to upload image", err);
+      setImgError(err instanceof Error ? err.message : "Failed to upload image.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleEditImage = (img: WebsiteImage) => {
+    setImageEditing(img);
+    setImgForm({
+      title: img.title || "",
+      altText: img.altText || "",
+      description: img.description || "",
+      category: img.category,
+      isActive: img.isActive,
+      sortOrder: img.sortOrder || 0,
+    });
+    setImgFile(null);
+    setImgError(null);
+    setImgSuccess(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleUpdateImageMeta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!imageEditing) return;
+    setImgError(null);
+    setImgSuccess(null);
+    setImageUploading(true);
+    try {
+      await updateDoc(doc(db, COLLECTIONS.websiteImages, imageEditing.id), {
+        title: imgForm.title,
+        altText: imgForm.altText,
+        description: imgForm.description,
+        category: imgForm.category,
+        isActive: imgForm.isActive,
+        sortOrder: imgForm.sortOrder,
+        updatedAt: new Date().toISOString(),
+      });
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === imageEditing.id
+            ? { ...img, title: imgForm.title, altText: imgForm.altText, description: imgForm.description, category: imgForm.category, isActive: imgForm.isActive, sortOrder: imgForm.sortOrder }
+            : img
+        )
+      );
+      resetImgForm();
+      setImgSuccess("Image updated successfully!");
+      setTimeout(() => setImgSuccess(null), 4000);
+    } catch (err) {
+      console.error("Failed to update image", err);
+      setImgError(err instanceof Error ? err.message : "Failed to update image.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleReplaceImage = async () => {
+    if (!imageEditing || !imgFile) return;
+    setImgError(null);
+    setImgSuccess(null);
+    setImageUploading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setImgError("Admin authentication required.");
+        setImageUploading(false);
+        return;
+      }
+      const idToken = await user.getIdToken();
+      // 1) Upload new image
+      const fd = new FormData();
+      fd.append("file", imgFile);
+      fd.append("category", imgForm.category);
+      fd.append("title", imgForm.title);
+      fd.append("altText", imgForm.altText);
+      fd.append("description", imgForm.description);
+      fd.append("isActive", String(imgForm.isActive));
+      fd.append("sortOrder", String(imgForm.sortOrder));
+
+      const uploadRes = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: fd,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
+
+      // 2) Update Firestore document with new Cloudinary data
+      await updateDoc(doc(db, COLLECTIONS.websiteImages, imageEditing.id), {
+        imageUrl: uploadData.secure_url,
+        publicId: uploadData.public_id,
+        cloudinaryFolder: uploadData.folder || "",
+        title: imgForm.title,
+        altText: imgForm.altText,
+        description: imgForm.description,
+        category: imgForm.category,
+        isActive: imgForm.isActive,
+        sortOrder: imgForm.sortOrder,
+        updatedAt: new Date().toISOString(),
+      });
+
+      // 3) Delete old Cloudinary asset
+      try {
+        const oldPublicId = imageEditing.publicId;
+        const deleteRes = await fetch("/api/admin/delete-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ publicId: oldPublicId }),
+        });
+        if (!deleteRes.ok) {
+          console.warn("Old Cloudinary asset could not be deleted (non-critical)");
+        }
+      } catch {
+        console.warn("Old Cloudinary asset cleanup failed (non-critical)");
+      }
+
+      // Update local state
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === imageEditing.id
+            ? { ...img, imageUrl: uploadData.secure_url, publicId: uploadData.public_id, cloudinaryFolder: uploadData.folder || "", title: imgForm.title, altText: imgForm.altText, description: imgForm.description, category: imgForm.category, isActive: imgForm.isActive, sortOrder: imgForm.sortOrder }
+            : img
+        )
+      );
+      resetImgForm();
+      setImgSuccess("Image replaced successfully!");
+      setTimeout(() => setImgSuccess(null), 4000);
+    } catch (err) {
+      console.error("Failed to replace image", err);
+      setImgError(err instanceof Error ? err.message : "Failed to replace image.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleDeleteImage = async (img: WebsiteImage) => {
+    if (!confirm(`Delete "${img.title || "untitled"}"? This will remove the image from Cloudinary and cannot be undone.`)) return;
+    setImgError(null);
+    setImgSuccess(null);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setImgError("Admin authentication required.");
+        return;
+      }
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/admin/delete-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ publicId: img.publicId, documentId: img.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Delete failed");
+      }
+      setImages((prev) => prev.filter((i) => i.id !== img.id));
+      setImgSuccess("Image deleted successfully!");
+      setTimeout(() => setImgSuccess(null), 4000);
+    } catch (err) {
+      console.error("Failed to delete image", err);
+      setImgError(err instanceof Error ? err.message : "Failed to delete image.");
+    }
+  };
+
+  const handleToggleImageActive = async (img: WebsiteImage) => {
+    try {
+      const newActive = !img.isActive;
+      await updateDoc(doc(db, COLLECTIONS.websiteImages, img.id), {
+        isActive: newActive,
+        updatedAt: new Date().toISOString(),
+      });
+      setImages((prev) => prev.map((i) => (i.id === img.id ? { ...i, isActive: newActive } : i)));
+    } catch (err) {
+      console.error("Failed to toggle image status", err);
+      alert(err instanceof Error ? err.message : "Failed to update image");
+    }
+  };
+
+  // ── Blog Management CRUD ──────────────────────────────────────────────────
+  const handleBlogCoverSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    e.target.value = "";
+    setBError(null);
+    setBSuccess(null);
+    if (!file) return;
+    if (!BLOG_COVER_ACCEPT.split(",").includes(file.type)) {
+      setBError("Please select an image file (JPG, PNG, WebP, GIF or AVIF).");
+      return;
+    }
+    if (file.size > BLOG_COVER_MAX_SIZE) {
+      setBError("Image must be under 10MB.");
+      return;
+    }
+    setBlogCoverUploading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setBError("Admin authentication required.");
+        setBlogCoverUploading(false);
+        return;
+      }
+      const idToken = await user.getIdToken();
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/upload-blog-image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Upload failed (${res.status})`);
+      }
+      setBForm((p) => ({ ...p, coverImage: data.secure_url }));
+      setBSuccess("Cover image uploaded successfully!");
+      setTimeout(() => setBSuccess(null), 4000);
+    } catch (err) {
+      console.error("Failed to upload blog cover image", err);
+      setBError(err instanceof Error ? err.message : "Failed to upload cover image.");
+    } finally {
+      setBlogCoverUploading(false);
+    }
+  };
+
+  const resetBlogForm = () => {
+    setBlogEditing(null);
+    setBForm({ title: "", authorName: "", mediumUrl: "", coverImage: "", description: "", category: "" });
+    setBError(null);
+    setBSuccess(null);
+  };
+
+  const handleAddBlog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBError(null);
+    setBSuccess(null);
+    const title = bForm.title.trim();
+    const mediumUrl = bForm.mediumUrl.trim();
+    if (!title) {
+      setBError("Blog title is required.");
+      return;
+    }
+    if (!mediumUrl) {
+      setBError("Medium article URL is required.");
+      return;
+    }
+    if (!blogEditing && !bForm.coverImage.trim()) {
+      setBError("Cover image is required. Please upload a cover image.");
+      return;
+    }
+    setBlogSubmitting(true);
+    try {
+      const docRef = await addDoc(collection(db, COLLECTIONS.blogs), {
+        title,
+        authorName: bForm.authorName.trim(),
+        mediumUrl,
+        coverImage: bForm.coverImage.trim(),
+        description: bForm.description.trim(),
+        category: bForm.category.trim() || "General",
+        createdAt: new Date().toISOString(),
+      });
+      const newBlog: Blog = {
+        id: docRef.id,
+        title,
+        authorName: bForm.authorName.trim(),
+        mediumUrl,
+        coverImage: bForm.coverImage.trim(),
+        description: bForm.description.trim(),
+        category: bForm.category.trim() || "General",
+        createdAt: new Date().toISOString(),
+      };
+      setBlogs((prev) => [newBlog, ...prev]);
+      resetBlogForm();
+      setBSuccess("Blog added successfully!");
+      setTimeout(() => setBSuccess(null), 4000);
+    } catch (err) {
+      console.error("Failed to add blog", err);
+      setBError(err instanceof Error ? err.message : "Failed to add blog.");
+    } finally {
+      setBlogSubmitting(false);
+    }
+  };
+
+  const handleEditBlog = (blog: Blog) => {
+    setBlogEditing(blog);
+    setBForm({
+      title: blog.title || "",
+      authorName: blog.authorName || "",
+      mediumUrl: blog.mediumUrl || "",
+      coverImage: blog.coverImage || "",
+      description: blog.description || "",
+      category: blog.category || "",
+    });
+    setBError(null);
+    setBSuccess(null);
+  };
+
+  const handleUpdateBlog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!blogEditing) return;
+    setBError(null);
+    setBSuccess(null);
+    const title = bForm.title.trim();
+    const mediumUrl = bForm.mediumUrl.trim();
+    if (!title) {
+      setBError("Blog title is required.");
+      return;
+    }
+    if (!mediumUrl) {
+      setBError("Medium article URL is required.");
+      return;
+    }
+    setBlogSubmitting(true);
+    try {
+      await updateDoc(doc(db, COLLECTIONS.blogs, blogEditing.id), {
+        title,
+        authorName: bForm.authorName.trim(),
+        mediumUrl,
+        coverImage: bForm.coverImage.trim(),
+        description: bForm.description.trim(),
+        category: bForm.category.trim() || "General",
+      });
+      setBlogs((prev) =>
+        prev.map((b) =>
+          b.id === blogEditing.id
+            ? { ...b, title, authorName: bForm.authorName.trim(), mediumUrl, coverImage: bForm.coverImage.trim(), description: bForm.description.trim(), category: bForm.category.trim() || "General" }
+            : b
+        )
+      );
+      resetBlogForm();
+      setBSuccess("Blog updated successfully!");
+      setTimeout(() => setBSuccess(null), 4000);
+    } catch (err) {
+      console.error("Failed to update blog", err);
+      setBError(err instanceof Error ? err.message : "Failed to update blog.");
+    } finally {
+      setBlogSubmitting(false);
+    }
+  };
+
+  const handleDeleteBlog = async (blog: Blog) => {
+    if (!confirm(`Delete "${blog.title}"? This cannot be undone.`)) return;
+    setBError(null);
+    setBSuccess(null);
+    try {
+      await deleteDoc(doc(db, COLLECTIONS.blogs, blog.id));
+      setBlogs((prev) => prev.filter((b) => b.id !== blog.id));
+      setBSuccess("Blog deleted successfully!");
+      setTimeout(() => setBSuccess(null), 4000);
+    } catch (err) {
+      console.error("Failed to delete blog", err);
+      setBError(err instanceof Error ? err.message : "Failed to delete blog.");
+    }
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     router.replace("/corexit-admin-login");
@@ -585,6 +1084,8 @@ export default function AdminDashboard() {
               { id: "dashboard", label: "Dashboard" },
               { id: "testimonials", label: "Testimonials" },
               { id: "messages", label: "Contact Messages" },
+              { id: "images", label: "Website Images" },
+              { id: "blogs", label: "Blog Management" },
               { id: "settings", label: "Settings" },
             ].map((item) => (
               <button
@@ -600,7 +1101,7 @@ export default function AdminDashboard() {
             <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold">Firebase</p>
             <p className="text-[12px] text-slate-600 mt-1">Project: corexit-652f5</p>
             <p className="text-[12px] text-slate-600">Auth: Email/Password</p>
-            <p className="text-[11px] text-slate-400 mt-2">Collections: testimonials · contact_messages · settings</p>
+            <p className="text-[11px] text-slate-400 mt-2">Collections: testimonials · contact_messages · settings · websiteImages · blogs</p>
           </div>
         </aside>
 
@@ -885,6 +1386,296 @@ export default function AdminDashboard() {
                 ))}
                 {filteredMessages.length === 0 && <p className="px-6 py-12 text-center text-[13px] text-slate-400">No messages match your search/filter.</p>}
               </div>
+            </div>
+          ) : tab === "images" ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33]">Website Images</h1>
+                <span className="text-[12px] text-slate-500">{imageStats.total} total · {imageStats.active} active</span>
+              </div>
+
+              {/* Stats */}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200 rounded-[16px] p-5">
+                  <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold">Total Images</p>
+                  <p className="text-[28px] font-bold tracking-[-0.02em] text-[#071A33] mt-2">{imageStats.total}</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-[16px] p-5">
+                  <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold">Active Images</p>
+                  <p className="text-[28px] font-bold tracking-[-0.02em] text-emerald-600 mt-2">{imageStats.active}</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-[16px] p-5">
+                  <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold">Inactive Images</p>
+                  <p className="text-[28px] font-bold tracking-[-0.02em] text-slate-500 mt-2">{imageStats.total - imageStats.active}</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-[16px] p-5">
+                  <p className="text-[11px] tracking-[0.08em] uppercase text-slate-400 font-semibold">Categories Used</p>
+                  <p className="text-[28px] font-bold tracking-[-0.02em] text-[#0057B8] mt-2">{Object.keys(imageStats.byCategory).length}</p>
+                </div>
+              </div>
+
+              {/* Notifications */}
+              {imgError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-[12px] text-red-600">{imgError}</div>
+              )}
+              {imgSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-[12px] text-emerald-600">{imgSuccess}</div>
+              )}
+
+              {/* Upload / Edit Form */}
+              <form onSubmit={imageEditing ? handleUpdateImageMeta : handleUploadImage} className="bg-white border border-slate-200 rounded-[16px] p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[14px] font-semibold text-[#071A33]">{imageEditing ? "Edit Image" : "Upload Image"}</h3>
+                  {imageEditing && (
+                    <button type="button" onClick={resetImgForm} className="text-[12px] font-medium text-slate-500 hover:text-[#071A33]">Cancel edit</button>
+                  )}
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Title *</label>
+                    <input value={imgForm.title} onChange={(e) => setImgForm((p) => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" placeholder="Website Hero Image" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Category *</label>
+                    <select value={imgForm.category} onChange={(e) => setImgForm((p) => ({ ...p, category: e.target.value as WebsiteImageCategory }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]">
+                      <option value="hero">Hero</option>
+                      <option value="about">About</option>
+                      <option value="services">Services</option>
+                      <option value="projects">Projects</option>
+                      <option value="blogs">Blogs</option>
+                      <option value="testimonials">Testimonials</option>
+                      <option value="contact">Contact</option>
+                      <option value="general">General</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Alt Text</label>
+                    <input value={imgForm.altText} onChange={(e) => setImgForm((p) => ({ ...p, altText: e.target.value }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" placeholder="Describe the image" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Sort Order</label>
+                    <input type="number" value={imgForm.sortOrder} onChange={(e) => setImgForm((p) => ({ ...p, sortOrder: parseInt(e.target.value, 10) || 0 }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Description</label>
+                  <textarea value={imgForm.description} onChange={(e) => setImgForm((p) => ({ ...p, description: e.target.value }))} rows={2} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8] resize-none" placeholder="Optional description" maxLength={300} />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">{imageEditing ? "Replace Image (optional)" : "Image File *"}</label>
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => setImgFile(e.target.files?.[0] || null)} className="w-full text-[13px] file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-[#0057B8] file:text-white file:text-[12px] file:font-medium hover:file:bg-[#003B7A]" />
+                    {imgFile && <p className="text-[11px] text-slate-500 mt-1 truncate">Selected: {imgFile.name}</p>}
+                  </div>
+                  <div className="flex items-end gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={imgForm.isActive} onChange={(e) => setImgForm((p) => ({ ...p, isActive: e.target.checked }))} className="w-4 h-4 rounded border-slate-300 text-[#0057B8] focus:ring-[#0057B8]" />
+                      <span className="text-[13px] text-slate-700">Active (visible on website)</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button type="submit" disabled={imageUploading || (!imageEditing && !imgFile)} className="px-6 py-3 rounded-none bg-[#0057B8] text-white text-[13px] font-semibold hover:bg-[#003B7A] disabled:opacity-50">
+                    {imageUploading ? "Processing…" : imageEditing ? "Update Metadata" : "Upload Image"}
+                  </button>
+                  {imageEditing && imgFile && (
+                    <button type="button" onClick={handleReplaceImage} disabled={imageUploading} className="px-6 py-3 rounded-none bg-[#071A33] text-white text-[13px] font-semibold hover:bg-black disabled:opacity-50">
+                      {imageUploading ? "Processing…" : "Replace Image"}
+                    </button>
+                  )}
+                </div>
+                {imageEditing && (
+                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-[12px] text-blue-700">
+                    Editing: <span className="font-semibold">{imageEditing.title}</span> · {imageEditing.category} · Cloudinary: {imageEditing.publicId?.slice(0, 30)}…
+                  </div>
+                )}
+                <p className="text-[11px] text-slate-400">Images are uploaded to Cloudinary and metadata is saved to Firestore (websiteImages collection).</p>
+              </form>
+
+              {/* Category Filter */}
+              <div className="flex flex-wrap gap-2">
+                {(["all", "hero", "about", "services", "projects", "blogs", "testimonials", "contact", "general"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setImageFilter(cat)}
+                    className={`px-4 py-2 rounded-lg text-[12px] font-medium transition-colors ${imageFilter === cat ? "bg-[#071A33] text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                  >
+                    {cat === "all" ? "All" : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    {cat !== "all" && imageStats.byCategory[cat] ? (
+                      <span className="ml-1.5 text-[10px] opacity-60">({imageStats.byCategory[cat]})</span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+
+              {/* Image Grid */}
+              {filteredImages.length === 0 ? (
+                <div className="bg-white border border-dashed border-slate-200 rounded-[16px] p-12 text-center">
+                  <p className="text-[14px] text-slate-500">{imageFilter === "all" ? "No images uploaded yet. Upload your first image above." : `No ${imageFilter} images found.`}</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredImages.map((img) => (
+                    <div key={img.id} className="bg-white border border-slate-200 rounded-[16px] overflow-hidden hover:border-slate-300 hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-all">
+                      <div className="relative h-[200px] bg-slate-100 overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.imageUrl}
+                          alt={img.altText || img.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className={`absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.06em] border ${img.isActive ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-100 text-slate-500 border-slate-200"}`}>
+                          {img.isActive ? "Active" : "Inactive"}
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <p className="text-[13px] font-semibold text-[#071A33] truncate">{img.title || "Untitled"}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="px-2 py-0.5 rounded-full bg-[#EAF4FF] text-[10px] font-semibold tracking-[0.06em] uppercase text-[#0057B8]">{img.category}</span>
+                          <span className="text-[11px] text-slate-400">Sort: {img.sortOrder}</span>
+                        </div>
+                        {img.description && <p className="text-[11px] text-slate-500 mt-2 truncate">{img.description}</p>}
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                          <button onClick={() => handleEditImage(img)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Edit</button>
+                          <button onClick={() => handleToggleImageActive(img)} className={`px-3 py-1.5 rounded-lg border text-[11px] font-medium ${img.isActive ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}>
+                            {img.isActive ? "Deactivate" : "Activate"}
+                          </button>
+                          <button onClick={() => handleDeleteImage(img)} className="ml-auto px-3 py-1.5 rounded-lg bg-red-50 border border-red-100 text-[11px] font-medium text-red-600 hover:bg-red-100">Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : tab === "blogs" ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33]">Blog Management</h1>
+                <span className="text-[12px] text-slate-500">{blogs.length} article{blogs.length === 1 ? "" : "s"}</span>
+              </div>
+
+              {/* Notifications */}
+              {bError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-[12px] text-red-600">{bError}</div>
+              )}
+              {bSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-[12px] text-emerald-600">{bSuccess}</div>
+              )}
+
+              {/* Add / Edit Form */}
+              <form
+                onSubmit={blogEditing ? handleUpdateBlog : handleAddBlog}
+                className="bg-white border border-slate-200 rounded-[16px] p-6 space-y-5"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[14px] font-semibold text-[#071A33]">{blogEditing ? "Edit Blog" : "Add Blog"}</h3>
+                  {blogEditing && (
+                    <button type="button" onClick={resetBlogForm} className="text-[12px] font-medium text-slate-500 hover:text-[#071A33]">Cancel edit</button>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Blog Title *</label>
+                  <input value={bForm.title} onChange={(e) => setBForm((p) => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" placeholder="Article title" />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Author Name</label>
+                    <input value={bForm.authorName} onChange={(e) => setBForm((p) => ({ ...p, authorName: e.target.value }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" placeholder="Corex IT Engineering" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Category</label>
+                    <select value={bForm.category} onChange={(e) => setBForm((p) => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]">
+                      <option value="">Select a category…</option>
+                      {BLOG_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Medium Article URL *</label>
+                    <input value={bForm.mediumUrl} onChange={(e) => setBForm((p) => ({ ...p, mediumUrl: e.target.value }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" placeholder="https://medium.com/..." />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">
+                      Cover Image {!blogEditing && "*"}
+                      {blogCoverUploading && <span className="ml-2 text-[#0057B8]">· Uploading…</span>}
+                    </label>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          accept={BLOG_COVER_ACCEPT}
+                          onChange={handleBlogCoverSelect}
+                          disabled={blogCoverUploading || blogSubmitting}
+                          className="w-full text-[13px] file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-[#0057B8] file:text-white file:text-[12px] file:font-medium hover:file:bg-[#003B7A] disabled:opacity-50"
+                        />
+                        {blogCoverUploading ? (
+                          <p className="text-[11px] text-[#0057B8] mt-1">Uploading cover image to Cloudinary…</p>
+                        ) : blogEditing && !bForm.coverImage ? (
+                          <p className="text-[11px] text-amber-600 mt-1">No cover image set — upload one to replace it.</p>
+                        ) : bForm.coverImage ? (
+                          <p className="text-[11px] text-emerald-600 mt-1">Cover image ready.</p>
+                        ) : (
+                          <p className="text-[11px] text-slate-500 mt-1">{blogEditing ? "Select an image to replace the current cover." : "Select an image from your computer to upload."}</p>
+                        )}
+                      </div>
+                      {bForm.coverImage && (
+                        <div className="shrink-0 w-40 h-24 rounded-[10px] overflow-hidden border border-slate-200 bg-slate-100">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={bForm.coverImage} alt="Cover preview" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Short Description</label>
+                    <textarea value={bForm.description} onChange={(e) => setBForm((p) => ({ ...p, description: e.target.value }))} rows={3} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8] resize-none" placeholder="Brief summary shown on the blog card" maxLength={500} />
+                  </div>
+                </div>
+                <button type="submit" disabled={blogSubmitting || blogCoverUploading} className="px-6 py-3 rounded-none bg-[#0057B8] text-white text-[13px] font-semibold hover:bg-[#003B7A] disabled:opacity-50">
+                  {blogSubmitting || blogCoverUploading ? "Saving…" : blogEditing ? "Update Blog" : "Add Blog"}
+                </button>
+                <p className="text-[11px] text-slate-400">Cover images are uploaded to Cloudinary and the secure URL is stored on the blog. Blogs live in the Firestore blogs collection and are shown on the public Blogs page — visitors open the Medium link when they click a card.</p>
+              </form>
+
+              {/* Blog List */}
+              {blogs.length === 0 ? (
+                <div className="bg-white border border-dashed border-slate-200 rounded-[16px] p-12 text-center">
+                  <p className="text-[14px] text-slate-500">No blogs yet. Add your first blog above.</p>
+                </div>
+              ) : (
+                <div className="bg-white border border-slate-200 rounded-[16px] overflow-hidden">
+                  <div className="divide-y divide-slate-100">
+                    {blogs.map((blog) => (
+                      <div key={blog.id} className="flex items-start gap-4 p-5">
+                        <div className="relative w-24 h-20 rounded-[10px] overflow-hidden bg-slate-100 shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={blog.coverImage || ""} alt={blog.title} className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-semibold text-[#071A33] truncate">{blog.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            {blog.authorName && <p className="text-[12px] text-slate-500">{blog.authorName}</p>}
+                            {blog.category && (
+                              <span className="inline-block px-2 py-0.5 rounded-full bg-[#0057B8]/10 text-[#0057B8] text-[10px] font-semibold tracking-wide">{blog.category}</span>
+                            )}
+                          </div>
+                          {blog.description && <p className="text-[12px] text-slate-500 mt-1 line-clamp-2">{blog.description}</p>}
+                          {blog.mediumUrl && (
+                            <a href={blog.mediumUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-[11px] text-[#0057B8] mt-1 hover:underline truncate max-w-[500px]">{blog.mediumUrl}</a>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button onClick={() => handleEditBlog(blog)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Edit</button>
+                          <button onClick={() => handleDeleteBlog(blog)} className="px-3 py-1.5 rounded-lg bg-red-50 border border-red-100 text-[11px] font-medium text-red-600 hover:bg-red-100">Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-6">

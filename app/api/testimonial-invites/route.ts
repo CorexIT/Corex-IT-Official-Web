@@ -3,9 +3,10 @@ import { getAdminDb, verifyAdminIdToken, hashToken, getAdminMissingEnvHint } fro
 import { randomBytes } from "crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
+export const runtime = 'nodejs';
 export const dynamic = "force-dynamic";
 
-// GET /api/testimonial-invites -> list invites (admin only)
+// GET /api/testimonial-invites -> list invites (admin only) - uses Firebase Admin Firestore (server-only)
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   let adminUser: Awaited<ReturnType<typeof verifyAdminIdToken>> = null;
@@ -40,9 +41,10 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ invites }, { status: 200 });
   } catch (err) {
-    console.error("[api/testimonial-invites] GET error", err);
+    // Safe diagnostics: log category without secrets
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("not configured") || msg.includes("Could not load") || msg.includes("default credentials") || msg.includes("credential")) {
+    console.error("[api/testimonial-invites] GET error", msg.includes("not configured") ? msg : "GET_FAILED");
+    if (msg.includes("not configured") || msg.includes("Could not load") || msg.includes("default credentials") || msg.includes("credential") || msg.includes("private_key") || msg.includes("PEM") || msg.includes("cert") || msg.includes("service account")) {
       return NextResponse.json({ error: "Firebase Admin not configured on server", hint: getAdminMissingEnvHint() }, { status: 503 });
     }
     return NextResponse.json({ error: "Failed to load invites" }, { status: 500 });
@@ -120,11 +122,14 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (err) {
-    console.error("[api/testimonial-invites] POST error", err);
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("not configured") || msg.includes("Could not load") || msg.includes("default credentials") || msg.includes("credential")) {
+    // Safe diagnostics without exposing private_key
+    console.error("[api/testimonial-invites] POST error: stage=FIRESTORE_WRITE", msg.includes("not configured") ? msg : "POST_FAILED");
+    if (msg.includes("not configured") || msg.includes("Could not load") || msg.includes("default credentials") || msg.includes("credential") || msg.includes("private_key") || msg.includes("PEM") || msg.includes("cert") || msg.includes("service account") || msg.includes("FIREBASE_SERVICE_ACCOUNT_KEY")) {
       return NextResponse.json({ error: "Firebase Admin not configured on server", hint: getAdminMissingEnvHint() }, { status: 503 });
     }
+    // Include safe Firestore error hint without secrets
+    console.error("[api/testimonial-invites] POST Firestore error:", msg.slice(0, 200));
     return NextResponse.json({ error: "Failed to generate invite" }, { status: 500 });
   }
 }

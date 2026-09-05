@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb, hashToken, getAdminMissingEnvHint } from "@/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 
+export const runtime = 'nodejs';
 export const dynamic = "force-dynamic";
 
 // GET /api/testimonial-invites/validate?token=xxx
