@@ -150,7 +150,7 @@ export function Footer() {
                 </Link>
               </div>
               <div className="mt-2">
-                <Link href="/terms-and-conditions" className="text-[#0057B8] hover:text-[#8AB6FF] transition-colors block">
+                <Link href="/terms-and-conditions" className="text-white hover:text-[#A0A0A0] transition-colors block">
                   Terms & Conditions
                 </Link>
               </div>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions — Corex IT",
+  title: "Terms & Conditions | Corex IT",
   description:
     "Terms & Conditions for Corex IT — acceptance of terms, services, intellectual property, payment terms, confidentiality, liability, warranties, termination, governing law and contact.",
 };
@@ -126,7 +126,7 @@ export default function TermsPage() {
         <div className="relative max-w-[1440px] mx-auto px-6 lg:px-10 py-12 md:py-16">
           <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-white/50 mb-3">Legal</p>
           <h1 className="text-[clamp(2rem,4vw,3rem)] font-bold leading-[1.02] tracking-[-0.03em] text-white max-w-[720px]">
-            Terms &amp; Conditions
+            Terms & Conditions
           </h1>
           <p className="text-[13px] leading-[1.6] text-white/60 mt-3 max-w-[560px]">
             Last updated: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} · Please read these terms carefully before using our website and services.
@@ -159,7 +159,7 @@ export default function TermsPage() {
               </div>
               <div className="hidden lg:block mt-4 rounded-[12px] bg-[#EAF4FF] border border-[#D4E8FF] p-4">
                 <p className="text-[12px] font-semibold text-[#071A33]">Need help?</p>
-                <p className="text-[12px] leading-[1.6] text-slate-600 mt-1">Questions about these terms? We&apos;re here to clarify.</p>
+                <p className="text-[12px] leading-[1.6] text-slate-600 mt-1">Questions about these terms? We are here to clarify.</p>
                 <Link href="/contact" className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#0057B8] hover:text-[#003B7A] mt-2">
                   Contact us
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -208,36 +208,6 @@ export default function TermsPage() {
                     </div>
                   </section>
                 ))}
-              </div>
-
-              {/* Privacy Policy link */}
-              <div className="mt-10 pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <Link
-                  href="/privacy-policy"
-                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#071A33] hover:text-[#0057B8] transition-colors group"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="transition-transform group-hover:-translate-x-0.5">
-                    <path d="M19 12H5M12 19l-7-7 7-7" />
-                  </svg>
-                  Privacy Policy
-                </Link>
-                <div className="flex gap-3">
-                  <Link
-                    href="/contact"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-none bg-[#0057B8] text-white text-[13px] font-semibold hover:bg-[#003B7A] transition-colors"
-                  >
-                    Contact us
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                  <Link
-                    href="/"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-none border border-slate-200 bg-white text-[#071A33] text-[13px] font-semibold hover:border-slate-300 transition-colors"
-                  >
-                    Back to Home
-                  </Link>
-                </div>
               </div>
             </div>
           </div>
