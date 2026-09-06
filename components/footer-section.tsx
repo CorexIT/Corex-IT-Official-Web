@@ -87,7 +87,7 @@ export function Footer() {
 
   const dynamicSocialLinks = [
     { name: "Facebook", url: settings.facebook, icon: FacebookIcon },
-    { name: "GitHub", url: settings.github, icon: GithubIcon },
+    // { name: "GitHub", url: settings.github, icon: GithubIcon },
     { name: "TikTok", url: settings.tiktok, icon: TikTokIcon },
     { name: "LinkedIn", url: settings.linkedin, icon: LinkedinIcon },
   ];
