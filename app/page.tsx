@@ -39,7 +39,8 @@ export default function Home() {
   return (
     <>
       <HeroSection />
-      <HeroCapabilitiesBar />
+      {/* Technology marquee temporarily hidden — keep for future use */}
+      {/* <HeroCapabilitiesBar /> */}
       <HomeIntro />
       <ServicesSection />
       <BlueFeatureSection />

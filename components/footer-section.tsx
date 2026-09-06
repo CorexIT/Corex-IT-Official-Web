@@ -139,22 +139,19 @@ export function Footer() {
           <div className="md:col-span-3">
             <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-white/40 mb-4">Services</p>
             <nav className="space-y-2.5">
-              {links.services.slice(0, 4).map((l) => (
+{links.services.slice(0, 4).map((l) => (
                 <Link key={l.label} href={l.href} className="block text-[13px] text-white/60 hover:text-white transition-colors">
                   {l.label}
                 </Link>
               ))}
               <div className="flex flex-wrap items-center gap-2 text-[13px]">
                 <Link href="/#services" className="text-white/60 hover:text-white transition-colors">
-                  Cloud &amp; DevOps
+                  Cloud & DevOps
                 </Link>
-                <span className="text-white/20">·</span>
-                <Link href="/privacy-policy" className="text-red-400 hover:text-red-300 transition-colors">
-                  Privacy Policy
-                </Link>
-                <span className="text-white/20">·</span>
-                <Link href="/terms-and-conditions" className="text-red-400 hover:text-red-300 transition-colors">
-                  Terms &amp; Conditions
+              </div>
+              <div className="mt-2">
+                <Link href="/terms-and-conditions" className="text-[#0057B8] hover:text-[#8AB6FF] transition-colors block">
+                  Terms & Conditions
                 </Link>
               </div>
             </nav>
