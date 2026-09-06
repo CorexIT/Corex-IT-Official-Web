@@ -7,17 +7,17 @@ import { useEffect, useState } from "react";
 
 const HERO_IMAGES = [
   {
-    src: "/images/corex-hero.jpg",
+    src: "/images/corex-hero-6.jpeg",
     alt: "Enterprise technology network — Corex IT",
     pos: "object-[center_35%]",
   },
   {
-    src: "/images/corex-hero-2.jpg",
+    src: "/images/corex-hero-5.png",
     alt: "Modern software engineering workspace — Corex IT",
     pos: "object-[center_40%]",
   },
   {
-    src: "/images/corex-hero-3.jpg",
+    src: "/images/corex-hero-4.jpeg",
     alt: "Digital transformation enterprise environment — Corex IT",
     pos: "object-[center_45%]",
   },
@@ -115,9 +115,10 @@ export function HeroSection() {
             className="text-[15px] md:text-[16.5px] leading-[1.7] text-white/85 max-w-[560px] mt-6"
             style={{ textShadow: "0 1px 10px rgba(0,0,0,0.28)" }}
           >
-            Corex IT is a Sri Lankan enterprise technology partner. We design
-            and engineer scalable web, mobile and cloud software that helps
-            ambitious businesses innovate, operate smarter and grow.
+            Corex IT is a Sri Lankan technology partner helping ambitious businesses design, 
+            build, and scale reliable digital solutions. We engineer scalable web, mobile, and 
+            cloud software that enables businesses to innovate faster, operate smarter, and 
+            grow with confidence.
           </motion.p>
 
           <motion.div
@@ -130,7 +131,7 @@ export function HeroSection() {
               href="/contact"
               className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-none bg-[#0057B8] text-white text-[14px] font-semibold hover:bg-[#003B7A] transition-colors shadow-[0_10px_28px_rgba(0, 87, 184, 0.38)]"
             >
-              Start a Project
+              Start Your Project
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
