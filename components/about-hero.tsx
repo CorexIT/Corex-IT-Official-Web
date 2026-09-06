@@ -110,11 +110,11 @@ export function AboutHero() {
             <span className="font-light tracking-[-0.04em] text-white/95">Building digital</span>
             <br />
             <span className="bg-gradient-to-r from-[#8AB6FF] via-[#5B9EFF] to-[#0057B8] bg-clip-text text-transparent">
-              experiences that create
+              Solutions That Create
             </span>
             <br />
             <span className="bg-gradient-to-r from-[#8AB6FF] via-[#5B9EFF] to-[#0057B8] bg-clip-text text-transparent">
-              real-world impact.
+              Real-World Impact
             </span>
           </motion.h1>
 
@@ -125,8 +125,7 @@ export function AboutHero() {
             className="text-[14.5px] md:text-[15.5px] leading-[1.7] text-white/80 max-w-[560px] mt-5"
             style={{ textShadow: "0 1px 10px rgba(0,0,0,0.28)" }}
           >
-            Corex IT is a Sri Lankan software engineering partner helping ambitious businesses design, build and scale
-            reliable digital products — with engineering discipline and a quality-first approach.
+           Corex IT is a Sri Lankan software engineering partner helping businesses design, build, and scale reliable digital products with modern technology and a quality-first approach.
           </motion.p>
 
           <motion.div
@@ -148,7 +147,7 @@ export function AboutHero() {
               href="/contact"
               className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-none bg-white/10 backdrop-blur border border-white/20 text-white text-[14px] font-semibold hover:bg-white hover:text-[#071A33] hover:border-white transition-colors"
             >
-              Talk to Us
+              Start a Project
             </Link>
           </motion.div>
         </div>
