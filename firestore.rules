@@ -42,6 +42,15 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null;
     }
 
+    // Company Highlights: managed by admin via admin panel
+    // Public may read only active highlights (isActive == true)
+    // Only authenticated admin may create, update, delete
+    match /company_highlights/{docId} {
+      allow get: if request.auth != null || resource.data.isActive == true;
+      allow list: if request.auth != null || resource.data.isActive == true;
+      allow create, update, delete: if request.auth != null;
+    }
+
     // Blogs: public can read all (public-facing articles); only admin can create/update/delete
     match /blogs/{docId} {
       allow get, list: if true;

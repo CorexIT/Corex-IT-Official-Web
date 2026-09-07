@@ -139,3 +139,26 @@ export const BLOG_CATEGORIES = [
   "Technology",
   "Business",
 ] as const;
+
+// company_highlights collection
+export type CompanyHighlight = {
+  id: string;
+  value: number;
+  suffix: string;
+  label: string;
+  description: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Timestamp | Date | string;
+  updatedAt: Timestamp | Date | string;
+};
+
+export const COLLECTIONS = {
+  testimonials: "testimonials",
+  contactMessages: "contact_messages",
+  settings: "settings",
+  testimonialInvites: "testimonial_invites",
+  websiteImages: "websiteImages",
+  blogs: "blogs",
+  companyHighlights: "company_highlights",
+} as const;

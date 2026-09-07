@@ -24,7 +24,18 @@
         { "fieldPath": "category", "order": "ASCENDING" },
         { "fieldPath": "sortOrder", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "company_highlights",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "sortOrder", "order": "ASCENDING" }
+      ]
     }
+  ],
+  "fieldOverrides": []
+}
   ],
   "fieldOverrides": []
 }

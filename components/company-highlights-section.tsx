@@ -3,38 +3,90 @@
 import { useState, useEffect, useRef } from "react";
 import { useInView } from "@/hooks/use-in-view";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+} from "firebase/firestore";
 
-const stats = [
-  { value: 10, suffix: "+", label: "Projects Delivered", description: "Successful projects delivered across diverse industries" },
-  { value: 5, suffix: "+", label: "Active Clients", description: "Active client relationships worldwide" },
-  { value: 2, suffix: "+", label: "Years of Excellence", description: "Years of experience in software engineering" },
-  { value: 95, suffix: "%", label: "Client Satisfaction Rate", description: "Client satisfaction based on delivered projects" },
-];
+interface CompanyHighlight {
+  id: string;
+  value: number;
+  suffix: string;
+  label: string;
+  description: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Timestamp | Date | string;
+  updatedAt: Timestamp | Date | string;
+}
 
 export function CompanyHighlightsSection() {
   const ref = useRef<HTMLDivElement>(null);
   const { isInView } = useInView();
   const prefersReducedMotion = usePrefersReducedMotion();
   const [animated, setAnimated] = useState(false);
-  const [countValues, setCountValues] = useState(
-    stats.map(() => ({ current: 0, finished: false }))
-  );
+  const [highlightStats, setHighlightStats] = useState<CompanyHighlight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const unsubscribeRef = useRef<(error?: Error) => void>(() => {});
   const rafRef = useRef<number | null>(null);
   const canceledRef = useRef<boolean>(false);
-  const finishedRef = useRef<boolean[]>([false, false, false, false]);
 
-  // Count animation function - starts counters from 0 to target values
+  // Fetch active company highlights from Firestore, ordered by sortOrder
+  useEffect(() => {
+    const q = query(collection(db, "company_highlights"), where("isActive", "==", true), orderBy("sortOrder", "asc"));
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const stats = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        } as CompanyHighlight)).sort((a, b) => a.sortOrder - b.sortOrder);
+        setHighlightStats(stats);
+        setLoading(false);
+        // Ensure countValues state matches the new data
+        setCountValues(
+          stats.map(() => ({ current: 0, finished: false }))
+        );
+        // Trigger animation after data loads and section is visible
+        if (!animated) {
+          setAnimated(true);
+        }
+      },
+      (err) => {
+        setError(err instanceof Error ? err.message : "Failed to load company highlights");
+        setLoading(false);
+      }
+    );
+
+    unsubscribeRef.current = () => {};
+    return () => {
+      unsub();
+      unsubscribeRef.current = () => {};
+    };
+  }, []);
+
+  // Initialize countValues with matching length to highlightStats
+  const [countValues, setCountValues] = useState(() =>
+    highlightStats.map(() => ({ current: 0, finished: false }))
+  );
+
+  // Start count animation
   const startCountAnimations = () => {
     canceledRef.current = false;
 
-    stats.forEach((stat, i) => {
+    highlightStats.forEach((_stat, i) => {
       const startTime = Date.now();
-      const duration = 1800; // 1.5 seconds
+      const duration = 1500;
       const from = 0;
-      const to = stat.value;
+      const to = highlightStats[i].value;
 
       const animate = () => {
-        if (canceledRef.current || finishedRef.current[i]) return;
+        if (canceledRef.current) return;
 
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
@@ -49,8 +101,16 @@ export function CompanyHighlightsSection() {
           return newPrev;
         });
 
-        if (progress < 1 && !canceledRef.current) {
+        if (progress < 1) {
           rafRef.current = requestAnimationFrame(animate);
+        } else {
+          // Ensure final value is set precisely
+          setCountValues((prev) => {
+            const newPrev = [...prev];
+            newPrev[i].current = to;
+            newPrev[i].finished = true;
+            return newPrev;
+          });
         }
       };
 
@@ -62,20 +122,20 @@ export function CompanyHighlightsSection() {
 
   // Start animation when section enters viewport and not yet animated
   useEffect(() => {
-    // If section already visible on load, start immediately
     const element = ref.current;
     if (!element) return;
 
     const startIfVisible = () => {
-      const isVisible = element.getBoundingClientRect().top < window.innerHeight && element.getBoundingClientRect().bottom > 0;
+      const isVisible =
+        element.getBoundingClientRect().top < window.innerHeight && element.getBoundingClientRect().bottom > 0;
 
       if (isVisible && !animated && !prefersReducedMotion) {
         setAnimated(true);
         startCountAnimations();
       } else if (isVisible && prefersReducedMotion) {
         // Immediately set final values when reduced motion is preferred
-        const finalValues = stats.map((_, i) => ({
-          current: stats[i].value,
+        const finalValues = highlightStats.map((_, i) => ({
+          current: highlightStats[i].value,
           finished: true,
         }));
         setCountValues(finalValues);
@@ -91,8 +151,8 @@ export function CompanyHighlightsSection() {
           setAnimated(true);
           startCountAnimations();
         } else if (animated && prefersReducedMotion) {
-          const finalValues = stats.map((_, i) => ({
-            current: stats[i].value,
+          const finalValues = highlightStats.map((_, i) => ({
+            current: highlightStats[i].value,
             finished: true,
           }));
           setCountValues(finalValues);
@@ -101,12 +161,8 @@ export function CompanyHighlightsSection() {
 
       // Initial check
       handleObserve();
-
-      // Re-check on state change
-      const unsubscribe = () => {};
-      return unsubscribe;
     }
-  }, [isInView, animated, prefersReducedMotion]);
+  }, [isInView, animated, prefersReducedMotion, highlightStats]);
 
   // Ensure values are set if section already visible on load
   useEffect(() => {
@@ -130,6 +186,20 @@ export function CompanyHighlightsSection() {
       }
     };
   }, []);
+
+  // Error message
+  if (error) {
+    return (
+      <section
+        ref={ref}
+        className="relative overflow-hidden bg-[#040E1F]"
+      >
+        <div className="relative max-w-[1440px] mx-auto px-6 lg:px-10 py-20 md:py-24">
+          <p className="text-center text-[15px] text-white/60 mb-8">{error}</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -174,19 +244,44 @@ export function CompanyHighlightsSection() {
             {/* Blue divider above stats */}
             <div className="h-[1px] bg-gradient-to-r from-transparent via-blue-100/20 to-transparent my-12"></div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {stats.map((stat, i) => (
-                <div key={stat.label} className="flex flex-col items-center gap-2 py-4 border-y border-white/10">
-                  <span className="text-[3rem] font-bold text-white tracking-[-0.02em]">
-                    {countValues[i].current}{stat.suffix}
-                  </span>
+            {loading ? (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Skeleton states while loading */}
+                {Array.from({ length: 4 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col items-center gap-2 py-4 border-y border-white/10"
+                  >
+                    <span className="text-[3rem] font-bold text-white tracking-[-0.02em] skeleton" />
+                    <p className="text-[12px] font-medium text-slate-400 uppercase tracking-[0.1em] skeleton" />
+                    <p className="text-[11px] text-slate-500 text-center skeleton" />
+                  </div>
+                ))}
+              </div>
+            ) : highlightStats.length === 0 ? null : (
+              <div className="grid grid-cols-2 gap-4">
+                {highlightStats.map((stat, i) => (
+                  <div
+                    key={stat.label}
+                    className="flex flex-col items-center gap-2 py-4 border-y border-white/10"
+                  >
+                    <span
+                      className="text-[3rem] font-bold text-white tracking-[-0.02em]"
+                    >
+                      {countValues[i].current}{stat.suffix}
+                    </span>
 
-                  <p className="text-[12px] font-medium text-slate-400 uppercase tracking-[0.1em]">{stat.label}</p>
+                    <p className="text-[12px] font-medium text-slate-400 uppercase tracking-[0.1em]">
+                      {stat.label}
+                    </p>
 
-                  <p className="text-[11px] text-slate-500 text-center">{stat.description}</p>
-                </div>
-              ))}
-            </div>
+                    <p className="text-[11px] text-slate-500 text-center">
+                      {stat.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
