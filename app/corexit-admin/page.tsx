@@ -228,15 +228,15 @@ export default function AdminDashboard() {
         // 6) Company Highlights
     try {
       const hSnap = await getDocs(query(collection(db, COLLECTIONS.companyHighlights), orderBy("sortOrder", "asc")));
-      setHighlights(hSnap.docs.map((d) => ({ id: d.id, ...(d.data() as CompanyHighlight) })));
+      setHighlights(hSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<CompanyHighlight, "id">) })));
     } catch (err) {
       console.error("Failed to load company highlights (admin)", err);
     }
 
-    // 6) Company Highlights
+        // 6) Company Highlights
     try {
       const hSnap = await getDocs(query(collection(db, COLLECTIONS.companyHighlights), orderBy("sortOrder", "asc")));
-      setHighlights(hSnap.docs.map((d) => ({ id: d.id, ...(d.data() as CompanyHighlight) })));
+      setHighlights(hSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<CompanyHighlight, "id">) })));
     } catch (err) {
       console.error("Failed to load company highlights (admin)", err);
     }
@@ -1110,18 +1110,72 @@ export default function AdminDashboard() {
       if (!highlightForm.label.trim() || !highlightForm.description.trim()) {
         setHighlightError("Label and description are required.");
         return;
-      }      if (highlightForm.value < 0) {
+      }
+      if (highlightForm.value < 0) {
         setHighlightError("Value must be non-negative.");
         return;
       }
       setHighlightSubmitting(true);
       setHighlightError(null);
-      await addDoc(db.collection("company_highlights"), {        value: highlightForm.value,        suffix: highlightForm.suffix,        label: highlightForm.label.trim(),        description: highlightForm.description.trim(),        sortOrder: highlightForm.sortOrder,        isActive: highlightForm.isActive,        createdAt: new Date().toISOString(),        updatedAt: new Date().toISOString(),      });      setHighlightSuccess("Highlight added successfully!");      setTimeout(() => setHighlightSuccess(null), 4000);      resetHighlightForm();      setHighlights((prev) => [{ id: docRef.id, ...(await db.collection("company_highlights").doc(docRef.id).get()).data() as CompanyHighlight }, ...prev]);    } catch (err: unknown) {      console.error("Failed to add highlight", err);      setHighlightError(err instanceof Error ? err.message : "Failed to add highlight.");    } finally {      setHighlightSubmitting(false);    }
+      const docRef = await addDoc(collection(db, COLLECTIONS.companyHighlights), {
+        value: highlightForm.value,
+        suffix: highlightForm.suffix,
+        label: highlightForm.label.trim(),
+        description: highlightForm.description.trim(),
+        sortOrder: highlightForm.sortOrder,
+        isActive: highlightForm.isActive,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      setHighlightSuccess("Highlight added successfully!");
+      setTimeout(() => setHighlightSuccess(null), 4000);
+      resetHighlightForm();
+      // Fetch the created document using modular Firestore API
+      const createdSnapshot = await getDoc(
+        doc(db, COLLECTIONS.companyHighlights, docRef.id)
+      );
+      if (!createdSnapshot.exists()) {
+        throw new Error("The Company Highlight was created but could not be loaded.");
+      }
+      const createdHighlight = {
+        id: createdSnapshot.id,
+        ...createdSnapshot.data(),
+      } as CompanyHighlight;
+      setHighlights((prev) =>
+        [...prev, createdHighlight].sort(
+          (a, b) => Number(a.sortOrder) - Number(b.sortOrder)
+        )
+      );
+    } catch (err: unknown) {
+      console.error("Failed to add highlight", err);
+      setHighlightError(err instanceof Error ? err.message : "Failed to add highlight.");
+    } finally {
+      setHighlightSubmitting(false);
+    }
   };
 
-  const handleEditHighlight = (h: CompanyHighlight) => {    setHighlightEditing(h);    setHighlightForm({      value: h.value,      suffix: h.suffix,      label: h.label,      description: h.description,      sortOrder: h.sortOrder,      isActive: h.isActive,    });    setHighlightError(null);    setHighlightSuccess(null);    setTab("company-highlights");    window.scrollTo({ top: 0, behavior: "smooth" });  };
+  const handleEditHighlight = (h: CompanyHighlight) => {
+    setHighlightEditing(h);
+    setHighlightForm({
+      value: h.value,
+      suffix: h.suffix,
+      label: h.label,
+      description: h.description,
+      sortOrder: h.sortOrder,
+      isActive: h.isActive,
+    });
+    setHighlightError(null);
+    setHighlightSuccess(null);
+    setTab("company-highlights");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-  const handleUpdateHighlight = async (id: string) => {    try {      if (!highlightForm.label.trim() || !highlightForm.description.trim()) {        setHighlightError("Label and description are required.");        return;      }
+  const handleUpdateHighlight = async (id: string) => {
+    try {
+      if (!highlightForm.label.trim() || !highlightForm.description.trim()) {
+        setHighlightError("Label and description are required.");
+        return;
+      }
       if (highlightForm.value < 0) {
         setHighlightError("Value must be non-negative.");
         return;
@@ -1137,19 +1191,22 @@ export default function AdminDashboard() {
         isActive: highlightForm.isActive,
         updatedAt: new Date().toISOString(),
       });
-      setHighlightSuccess("Highlight updated successfully!");      setTimeout(() => setHighlightSuccess(null), 4000);
+      setHighlightSuccess("Highlight updated successfully!");
+      setTimeout(() => setHighlightSuccess(null), 4000);
       resetHighlightForm();
       setHighlights((prev) =>
         prev.map((h) => (h.id === id ? { ...h, value: highlightForm.value, suffix: highlightForm.suffix, label: highlightForm.label.trim(), description: highlightForm.description.trim(), sortOrder: highlightForm.sortOrder, isActive: highlightForm.isActive } as CompanyHighlight : h))
       );
     } catch (err: unknown) {
       console.error("Failed to update highlight", err);
-      setHighlightError(err instanceof Error ? err.message : "Failed to update highlight.");    } finally {
+      setHighlightError(err instanceof Error ? err.message : "Failed to update highlight.");
+    } finally {
       setHighlightSubmitting(false);
     }
   }
 
-  const handleDeleteHighlight = async (id: string) => {    if (!confirm("Delete this highlight? This cannot be undone.")) return;
+  const handleDeleteHighlight = async (id: string) => {
+    if (!confirm("Delete this highlight? This cannot be undone.")) return;
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -1180,11 +1237,13 @@ export default function AdminDashboard() {
         throw new Error((data.error as string) || `Failed to delete highlight (${res.status})`);
       }
       setHighlights((prev) => prev.filter((h) => h.id !== id));
-      setHighlightSuccess("Highlight deleted successfully!");      setTimeout(() => setHighlightSuccess(null), 4000);
+      setHighlightSuccess("Highlight deleted successfully!");
+      setTimeout(() => setHighlightSuccess(null), 4000);
       resetHighlightForm();
     } catch (err: unknown) {
       console.error("Failed to delete highlight", err);
-      setHighlightError(err instanceof Error ? err.message : "Failed to delete highlight.");    }
+      setHighlightError(err instanceof Error ? err.message : "Failed to delete highlight.");
+    }
   };
 
   const handleToggleHighlightActive = async (h: CompanyHighlight) => {
@@ -1609,90 +1668,6 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
-          ) : (
-            <div className="space-y-6">
-              <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#071A33]">Company Highlights</h1>
-
-              {/* Form section */}
-              <div className="bg-white border border-slate-200 rounded-[16px] p-6 space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Value *</label>
-                    <input value={highlightForm.value} onChange={(e) => setHighlightForm((p) => ({ ...p, value: Number(e.target.value) }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" placeholder="0" type="number" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Suffix *</label>
-                    <select value={highlightForm.suffix} onChange={(e) => setHighlightForm((p) => ({ ...p, suffix: e.target.value }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]">
-                      <option value="">None</option>
-                      <option value="+">+</option>
-                      <option value="%">%</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Label *</label>
-                    <input value={highlightForm.label} onChange={(e) => setHighlightForm((p) => ({ ...p, label: e.target.value }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" placeholder="Projects Delivered" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Description *</label>
-                    <textarea value={highlightForm.description} onChange={(e) => setHighlightForm((p) => ({ ...p, description: e.target.value }))} rows={3} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8] resize-none" placeholder="Successful projects delivered across diverse industries" maxLength={300} />
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Display Order *</label>
-                    <input value={highlightForm.sortOrder} onChange={(e) => setHighlightForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))} className="w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0057B8]" type="number" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1.5">Active Status</label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={highlightForm.isActive} onChange={(e) => setHighlightForm((p) => ({ ...p, isActive: e.target.checked }))} className="w-4 h-4 rounded border-slate-300 text-[#0057B8] focus:ring-[#0057B8]" />
-                      <span className="text-[13px] text-slate-700">Active (visible on website)</span>
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  {highlightEditing ? (
-                    <button type="button" onClick={() => setHighlightEditing(null)} className="text-[12px] font-medium text-slate-500 hover:text-[#071A33]">Cancel edit</button>
-                  ) : null}
-                  <button type="submit" disabled={highlightSubmitting} className="px-6 py-3 rounded-none bg-[#0057B8] text-white text-[13px] font-semibold hover:bg-[#003B7A] disabled:opacity-50">
-                    {highlightSubmitting ? "Processing…" : highlightEditing ? "Update Highlight" : "Add Highlight"}
-                  </button>
-                </div>
-                {highlightError && <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{highlightError}</p>}
-                {highlightSuccess && <p className="text-[12px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">{highlightSuccess}</p>}
-              </div>
-
-              {/* Highlights list */}
-              <div className="mt-8">
-                <h3 className="text-[14px] font-semibold text-[#071A33]">Existing Highlights</h3>
-                {highlights.length === 0 ? (
-                  <p className="text-[13px] text-slate-500 mt-4">No highlights yet. Add your first one above.</p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    {highlights.map((h) => (
-                      <div key={h.id} className="bg-white border border-slate-200 rounded-[16px] p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="text-[13px] font-semibold text-[#071A33]">{h.label}</p>
-                            <p className="text-[12px] text-slate-500">{h.suffix}{h.value}</p>
-                            <p className="text-[11px] text-slate-400">Sort: {h.sortOrder}</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button onClick={() => setHighlightEditing(h)} className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Edit</button>
-                            <button onClick={() => handleDeleteHighlight(h.id)} className="px-2 py-1 rounded-lg bg-red-50 border border-red-100 text-[11px] font-medium text-red-600 hover:bg-red-100">Delete</button>
-                          </div>
-                        </div>
-                        {h.isActive ? (
-                          <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-semibold tracking-[0.06em] uppercase">Active</span>
-                        ) : (
-                          <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-semibold tracking-[0.06em] uppercase">Inactive</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
           ) : tab === "messages" ? (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2005,12 +1980,12 @@ export default function AdminDashboard() {
                             {blog.authorName && <p className="text-[12px] text-slate-500">{blog.authorName}</p>}
                             {blog.category && (
                               <span className="inline-block px-2 py-0.5 rounded-full bg-[#0057B8]/10 text-[#0057B8] text-[10px] font-semibold tracking-wide">{blog.category}</span>
-)
+)}
                           </div>
                           {blog.description && <p className="text-[12px] text-slate-500 mt-1 line-clamp-2">{blog.description}</p>}
                           {blog.mediumUrl && (
                             <a href={blog.mediumUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-[11px] text-[#0057B8] mt-1 hover:underline truncate max-w-[500px]">{blog.mediumUrl}</a>
-                          )}
+)}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button onClick={() => handleEditBlog(blog)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Edit</button>

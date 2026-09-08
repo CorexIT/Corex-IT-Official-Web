@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminIdToken, getAdminDb } from "@/lib/firebase-admin";
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, ctx: RouteContext<"/api/company-highlights/[id]">) {
   try {
+    const { id } = await ctx.params;
     const authHeader = request.headers.get("Authorization");
     const admin = await verifyAdminIdToken(authHeader);
     if (!admin) {
@@ -10,7 +11,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     const db = getAdminDb();
-    await db.collection("company_highlights").doc(params.id).delete();
+    await db.collection("company_highlights").doc(id).delete();
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -22,8 +23,9 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, ctx: RouteContext<"/api/company-highlights/[id]">) {
   try {
+    const { id } = await ctx.params;
     const authHeader = request.headers.get("Authorization");
     const admin = await verifyAdminIdToken(authHeader);
     if (!admin) {
@@ -64,7 +66,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const effectiveDescription = description.trim();
 
     const db = getAdminDb();
-    await db.collection("company_highlights").doc(params.id).update({
+    await db.collection("company_highlights").doc(id).update({
       value,
       suffix: effectiveSuffix,
       label: effectiveLabel,
@@ -75,7 +77,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     });
 
     return NextResponse.json({
-      id: params.id,
+      id,
       value,
       suffix: effectiveSuffix,
       label: effectiveLabel,

@@ -94,6 +94,7 @@ export const COLLECTIONS = {
   testimonialInvites: "testimonial_invites",
   websiteImages: "websiteImages",
   blogs: "blogs",
+  companyHighlights: "company_highlights",
 } as const;
 
 export const SETTINGS_DOC_ID = "company";
@@ -153,12 +154,4 @@ export type CompanyHighlight = {
   updatedAt: Timestamp | Date | string;
 };
 
-export const COLLECTIONS = {
-  testimonials: "testimonials",
-  contactMessages: "contact_messages",
-  settings: "settings",
-  testimonialInvites: "testimonial_invites",
-  websiteImages: "websiteImages",
-  blogs: "blogs",
-  companyHighlights: "company_highlights",
-} as const;
+
