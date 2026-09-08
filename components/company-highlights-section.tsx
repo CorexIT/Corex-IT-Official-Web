@@ -53,10 +53,8 @@ export function CompanyHighlightsSection() {
         setCountValues(
           stats.map(() => ({ current: 0, finished: false }))
         );
-        // Trigger animation after data loads and section is visible
-        if (!animated) {
-          setAnimated(true);
-        }
+        // Do NOT set animated here: the in-view effects below trigger the
+        // count-up animation once the stats are loaded and the section is visible.
       },
       (err) => {
         setError(err instanceof Error ? err.message : "Failed to load company highlights");
@@ -126,14 +124,18 @@ export function CompanyHighlightsSection() {
     const element = ref.current;
     if (!element) return;
 
+    // Only animate once actual stats exist — never mark animated early on empty data,
+    // otherwise counters stay at 0 when the data arrives later.
+    const isDataReady = highlightStats.length > 0;
+
     const startIfVisible = () => {
       const isVisible =
         element.getBoundingClientRect().top < window.innerHeight && element.getBoundingClientRect().bottom > 0;
 
-      if (isVisible && !animated && !prefersReducedMotion) {
+      if (isVisible && !animated && !prefersReducedMotion && isDataReady) {
         setAnimated(true);
         startCountAnimations();
-      } else if (isVisible && prefersReducedMotion) {
+      } else if (isVisible && prefersReducedMotion && isDataReady) {
         // Immediately set final values when reduced motion is preferred
         const finalValues = highlightStats.map((_, i) => ({
           current: highlightStats[i].value,
@@ -146,7 +148,7 @@ export function CompanyHighlightsSection() {
     startIfVisible();
 
     // Observe visibility changes via useInView
-    if (isInView && !animated) {
+    if (isInView && !animated && isDataReady) {
       const handleObserve = () => {
         if (!animated && !prefersReducedMotion) {
           setAnimated(true);
@@ -168,7 +170,7 @@ export function CompanyHighlightsSection() {
   // Ensure values are set if section already visible on load
   useEffect(() => {
     const element = ref.current;
-    if (!element || animated || prefersReducedMotion) return;
+    if (!element || animated || prefersReducedMotion || highlightStats.length === 0) return;
 
     const isVisible = element.getBoundingClientRect().top < window.innerHeight && element.getBoundingClientRect().bottom > 0;
 
@@ -176,7 +178,7 @@ export function CompanyHighlightsSection() {
       setAnimated(true);
       startCountAnimations();
     }
-  }, [animated, prefersReducedMotion, isInView]);
+  }, [animated, prefersReducedMotion, isInView, highlightStats]);
 
   // Cleanup animation frames on unmount
   useEffect(() => {
@@ -188,18 +190,10 @@ export function CompanyHighlightsSection() {
     };
   }, []);
 
-  // Error message
+  // On load failure: keep the section (header/text) and hide the stats grid.
+  // The real error is logged here — never shown raw to visitors.
   if (error) {
-    return (
-      <section
-        ref={ref}
-        className="relative overflow-hidden bg-[#040E1F]"
-      >
-        <div className="relative max-w-[1440px] mx-auto px-6 lg:px-10 py-20 md:py-24">
-          <p className="text-center text-[15px] text-white/60 mb-8">{error}</p>
-        </div>
-      </section>
-    );
+    console.error("[company-highlights] Failed to load active highlights, hiding stats grid:", error);
   }
 
   return (

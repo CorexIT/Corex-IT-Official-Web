@@ -171,6 +171,45 @@ export default function AdminDashboard() {
     return () => unsub();
   }, [router]);
 
+  // Company Highlights — single secure fetch path via API (Admin SDK), mirroring the invites flow.
+  // Uses the signed-in Firebase user ID token; never localStorage.
+  const fetchHighlightsFromApi = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      let idToken: string | null = null;
+      try {
+        idToken = await user.getIdToken();
+      } catch (tokenErr) {
+        console.error("Failed to load company highlights (admin) — getIdToken failed", tokenErr);
+      }
+      if (!idToken) {
+        console.error("Failed to load company highlights (admin) — no ID token");
+        return;
+      }
+      const res = await fetch("/api/company-highlights", {
+        headers: { Authorization: `Bearer ${idToken}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.error("Failed to load company highlights (admin)", res.status, errText);
+        if (res.status === 401) {
+          setHighlightError("Admin authentication token is invalid. Please sign in again.");
+        } else if (res.status === 503) {
+          setHighlightError(errText || "Firebase Admin not configured on server");
+        } else {
+          setHighlightError("Failed to load company highlights.");
+        }
+        return;
+      }
+      const data = await res.json();
+      setHighlights((data.highlights as CompanyHighlight[]) || []);
+    } catch (err) {
+      console.error("Failed to load company highlights (admin) — unexpected", err);
+    }
+  };
+
   // Fetch data — only after auth is confirmed (wait for onAuthStateChanged)
   // Each collection is fetched independently so a failure in one (e.g., invites API) does NOT block the others.
   async function fetchAll() {
@@ -225,21 +264,8 @@ export default function AdminDashboard() {
       console.error("Failed to load blogs (admin)", err);
     }
 
-        // 6) Company Highlights
-    try {
-      const hSnap = await getDocs(query(collection(db, COLLECTIONS.companyHighlights), orderBy("sortOrder", "asc")));
-      setHighlights(hSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<CompanyHighlight, "id">) })));
-    } catch (err) {
-      console.error("Failed to load company highlights (admin)", err);
-    }
-
-        // 6) Company Highlights
-    try {
-      const hSnap = await getDocs(query(collection(db, COLLECTIONS.companyHighlights), orderBy("sortOrder", "asc")));
-      setHighlights(hSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<CompanyHighlight, "id">) })));
-    } catch (err) {
-      console.error("Failed to load company highlights (admin)", err);
-    }
+        // 6) Company Highlights via secure server API (Admin SDK) — single fetch path
+    await fetchHighlightsFromApi();
 
 // 5) Invites via secure server API (Admin SDK) — additive only, must NOT block existing panel
     // Uses existing Firebase Auth instance; waits for onAuthStateChanged (authUser) — never localStorage/URL
@@ -1115,37 +1141,52 @@ export default function AdminDashboard() {
         setHighlightError("Value must be non-negative.");
         return;
       }
+      const user = auth.currentUser;
+      if (!user) {
+        setHighlightError("Admin authentication required.");
+        return;
+      }
+      let idToken: string | null = null;
+      try {
+        idToken = await user.getIdToken();
+      } catch {
+        setHighlightError("Admin authentication token is invalid. Please sign in again.");
+        return;
+      }
+      if (!idToken) {
+        setHighlightError("Admin authentication token is invalid. Please sign in again.");
+        return;
+      }
       setHighlightSubmitting(true);
       setHighlightError(null);
-      const docRef = await addDoc(collection(db, COLLECTIONS.companyHighlights), {
-        value: highlightForm.value,
-        suffix: highlightForm.suffix,
+      const payload = {
+        value: Number(highlightForm.value),
+        suffix: highlightForm.suffix || "",
         label: highlightForm.label.trim(),
         description: highlightForm.description.trim(),
-        sortOrder: highlightForm.sortOrder,
+        sortOrder: Number(highlightForm.sortOrder),
         isActive: highlightForm.isActive,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      };
+      const res = await fetch("/api/company-highlights", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(payload),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) {
+          setHighlightError("Admin authentication token is invalid. Please sign in again.");
+          return;
+        }
+        throw new Error((data.error as string) || `Failed to add highlight (${res.status})`);
+      }
       setHighlightSuccess("Highlight added successfully!");
       setTimeout(() => setHighlightSuccess(null), 4000);
       resetHighlightForm();
-      // Fetch the created document using modular Firestore API
-      const createdSnapshot = await getDoc(
-        doc(db, COLLECTIONS.companyHighlights, docRef.id)
-      );
-      if (!createdSnapshot.exists()) {
-        throw new Error("The Company Highlight was created but could not be loaded.");
-      }
-      const createdHighlight = {
-        id: createdSnapshot.id,
-        ...createdSnapshot.data(),
-      } as CompanyHighlight;
-      setHighlights((prev) =>
-        [...prev, createdHighlight].sort(
-          (a, b) => Number(a.sortOrder) - Number(b.sortOrder)
-        )
-      );
+      await fetchHighlightsFromApi();
     } catch (err: unknown) {
       console.error("Failed to add highlight", err);
       setHighlightError(err instanceof Error ? err.message : "Failed to add highlight.");
@@ -1180,23 +1221,52 @@ export default function AdminDashboard() {
         setHighlightError("Value must be non-negative.");
         return;
       }
+      const user = auth.currentUser;
+      if (!user) {
+        setHighlightError("Admin authentication required.");
+        return;
+      }
+      let idToken: string | null = null;
+      try {
+        idToken = await user.getIdToken();
+      } catch {
+        setHighlightError("Admin authentication token is invalid. Please sign in again.");
+        return;
+      }
+      if (!idToken) {
+        setHighlightError("Admin authentication token is invalid. Please sign in again.");
+        return;
+      }
       setHighlightSubmitting(true);
       setHighlightError(null);
-      await updateDoc(doc(db, "company_highlights", id), {
-        value: highlightForm.value,
-        suffix: highlightForm.suffix,
+      const payload = {
+        value: Number(highlightForm.value),
+        suffix: highlightForm.suffix || "",
         label: highlightForm.label.trim(),
         description: highlightForm.description.trim(),
-        sortOrder: highlightForm.sortOrder,
+        sortOrder: Number(highlightForm.sortOrder),
         isActive: highlightForm.isActive,
-        updatedAt: new Date().toISOString(),
+      };
+      const res = await fetch("/api/company-highlights/" + id, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(payload),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) {
+          setHighlightError("Admin authentication token is invalid. Please sign in again.");
+          return;
+        }
+        throw new Error((data.error as string) || `Failed to update highlight (${res.status})`);
+      }
       setHighlightSuccess("Highlight updated successfully!");
       setTimeout(() => setHighlightSuccess(null), 4000);
       resetHighlightForm();
-      setHighlights((prev) =>
-        prev.map((h) => (h.id === id ? { ...h, value: highlightForm.value, suffix: highlightForm.suffix, label: highlightForm.label.trim(), description: highlightForm.description.trim(), sortOrder: highlightForm.sortOrder, isActive: highlightForm.isActive } as CompanyHighlight : h))
-      );
+      await fetchHighlightsFromApi();
     } catch (err: unknown) {
       console.error("Failed to update highlight", err);
       setHighlightError(err instanceof Error ? err.message : "Failed to update highlight.");
@@ -1265,13 +1335,32 @@ export default function AdminDashboard() {
         alert("Admin authentication token is invalid. Please sign in again.");
         return;
       }
-      await updateDoc(doc(db, "company_highlights", h.id), {
-        isActive: newActive,
-        updatedAt: new Date().toISOString(),
+      const res = await fetch("/api/company-highlights/" + h.id, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          value: h.value,
+          suffix: h.suffix || "",
+          label: h.label,
+          description: h.description,
+          sortOrder: h.sortOrder,
+          isActive: newActive,
+        }),
       });
-      setHighlights((prev) =>
-        prev.map((hi) => (hi.id === h.id ? { ...hi, isActive: newActive } : hi))
-      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert("Admin authentication token is invalid. Please sign in again.");
+          return;
+        }
+        throw new Error((data.error as string) || `Failed to update highlight (${res.status})`);
+      }
+      setHighlightSuccess(newActive ? "Highlight activated!" : "Highlight deactivated!");
+      setTimeout(() => setHighlightSuccess(null), 4000);
+      await fetchHighlightsFromApi();
     } catch (err) {
       console.error("Failed to toggle highlight status", err);
       alert(err instanceof Error ? err.message : "Failed to toggle highlight status.");
@@ -1649,19 +1738,18 @@ export default function AdminDashboard() {
                             <p className="text-[11px] text-slate-400">Sort: {h.sortOrder}</p>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => setHighlightEditing(h)} className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Edit</button>
-                            <button onClick={() => {
-                              if (confirm("Delete this highlight? This cannot be undone.")) {
-                                // Delete via API
-                              }
-                            }} className="px-2 py-1 rounded-lg bg-red-50 border border-red-100 text-[11px] font-medium text-red-600 hover:bg-red-100">Delete</button>
+                            <button onClick={() => handleEditHighlight(h)} className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Edit</button>
+                            <button onClick={() => handleDeleteHighlight(h.id)} className="px-2 py-1 rounded-lg bg-red-50 border border-red-100 text-[11px] font-medium text-red-600 hover:bg-red-100">Delete</button>
                           </div>
                         </div>
-                        {h.isActive ? (
-                          <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-semibold tracking-[0.06em] uppercase">Active</span>
-                        ) : (
-                          <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-semibold tracking-[0.06em] uppercase">Inactive</span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {h.isActive ? (
+                            <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-semibold tracking-[0.06em] uppercase">Active</span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-semibold tracking-[0.06em] uppercase">Inactive</span>
+                          )}
+                          <button onClick={() => handleToggleHighlightActive(h)} className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 hover:bg-slate-50">{h.isActive ? "Deactivate" : "Activate"}</button>
+                        </div>
                       </div>
                     ))}
                   </div>

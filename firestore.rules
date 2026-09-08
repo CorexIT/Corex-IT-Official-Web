@@ -43,8 +43,10 @@ service cloud.firestore {
     }
 
     // Company Highlights: managed by admin via admin panel
-    // Public may read only active highlights (isActive == true)
-    // Only authenticated admin may create, update, delete
+    // Public may read only active highlights via the filtered query:
+    //   query(collection(db,"company_highlights"), where("isActive","==",true), orderBy("sortOrder","asc"))
+    // list rule validates per-document isActive so inactive docs can never be exposed.
+    // Only authenticated admin may create, update, delete (admin panel uses server API, not direct client writes).
     match /company_highlights/{docId} {
       allow get: if request.auth != null || resource.data.isActive == true;
       allow list: if request.auth != null || resource.data.isActive == true;
